@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Check, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { formatBRL, formatAmount, displayAmount, type Unit } from "@/lib/format";
 import UnitPicker, { convertAmount } from "@/components/unit-picker";
+import MoneyInput from "@/components/money-input";
 import {
   deleteListItem,
   renameListItem,
@@ -40,9 +41,7 @@ export default function ListItemRow({
   const [renaming, setRenaming] = useState(false);
 
   const priceForm = useRef<HTMLFormElement>(null);
-  const [price, setPrice] = useState(
-    item.unit_price == null ? "" : String(item.unit_price).replace(".", ","),
-  );
+  const [priceReais, setPriceReais] = useState(item.unit_price ?? 0);
   const [unit, setUnit] = useState<Unit>(item.unit);
   const [amount, setAmount] = useState(
     String(displayAmount(item.quantity, item.unit)),
@@ -50,7 +49,7 @@ export default function ListItemRow({
 
   const amountNum = toNum(amount);
   const qtyKg = unit === "g" ? amountNum / 1000 : amountNum;
-  const lineTotal = toNum(price) * (unit === "un" ? amountNum : qtyKg);
+  const lineTotal = priceReais * (unit === "un" ? amountNum : qtyKg);
 
   async function commit(nextUnit: Unit, nextAmount: string) {
     setUnit(nextUnit);
@@ -172,14 +171,12 @@ export default function ListItemRow({
             <input type="hidden" name="id" value={item.id} />
             <input type="hidden" name="list_id" value={listId} />
             <span className="text-xs text-ink-faint">R$</span>
-            <input
+            <MoneyInput
               name="unit_price"
-              inputMode="decimal"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              value={priceReais}
+              onValueChange={setPriceReais}
               onBlur={() => priceForm.current?.requestSubmit()}
-              placeholder="0,00"
-              aria-label={`Preço de ${item.name}`}
+              ariaLabel={`Preço de ${item.name}`}
               className="w-16 bg-transparent px-1 py-1.5 text-right text-[15px] outline-none"
             />
           </form>

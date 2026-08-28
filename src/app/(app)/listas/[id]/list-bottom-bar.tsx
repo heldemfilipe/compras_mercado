@@ -5,12 +5,13 @@ import { Minus, Plus, Sparkles } from "lucide-react";
 import { guessCategoryName } from "@/lib/categorize";
 import type { Unit } from "@/lib/format";
 import UnitPicker from "@/components/unit-picker";
+import MoneyInput from "@/components/money-input";
 import { addListItem } from "../actions";
 
 export default function ListBottomBar({ listId }: { listId: string }) {
   const ref = useRef<HTMLFormElement>(null);
   const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
+  const [priceReais, setPriceReais] = useState(0);
   const [unit, setUnit] = useState<Unit>("un");
   const [qty, setQty] = useState(1);
   const [amount, setAmount] = useState("");
@@ -20,7 +21,7 @@ export default function ListBottomBar({ listId }: { listId: string }) {
 
   function reset() {
     setName("");
-    setPrice("");
+    setPriceReais(0);
     setUnit("un");
     setQty(1);
     setAmount("");
@@ -59,14 +60,12 @@ export default function ListBottomBar({ listId }: { listId: string }) {
             <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-faint">
               R$
             </span>
-            <input
+            <MoneyInput
               name="unit_price"
-              inputMode="decimal"
-              placeholder="0,00"
-              aria-label="Valor unitário"
+              value={priceReais}
+              onValueChange={setPriceReais}
+              ariaLabel="Valor unitário"
               className="input w-full pl-8 pr-2 text-right"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
             />
           </div>
 
