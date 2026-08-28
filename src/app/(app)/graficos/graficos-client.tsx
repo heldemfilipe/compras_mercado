@@ -72,11 +72,54 @@ export default function GraficosClient({
 
   /* ---------------- produto ao longo do tempo ---------------- */
   const [query, setQuery] = useState("");
+  const [chosen, setChosen] = useState<string | null>(null);
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .trim();
+
+  // lista de produtos distintos que casam com a busca
+  const matches = useMemo(() => {
+    const q = norm(query);
+    if (q.length < 2) return [];
+    const map = new Map<
+      string,
+      { name: string; count: number; last: number; lastDate: string }
+    >();
+    for (const it of items) {
+      if (!norm(it.name).includes(q)) continue;
+      const key = norm(it.name);
+      const cur = map.get(key);
+      if (!cur) {
+        map.set(key, {
+          name: it.name,
+          count: 1,
+          last: it.unit_price,
+          lastDate: it.date,
+        });
+      } else {
+        cur.count++;
+        if (it.date > cur.lastDate) {
+          cur.last = it.unit_price;
+          cur.lastDate = it.date;
+          cur.name = it.name;
+        }
+      }
+    }
+    return [...map.values()].sort(
+      (a, b) => b.count - a.count || a.name.localeCompare(b.name, "pt-BR"),
+    );
+  }, [items, query]);
+
+  const activeName = chosen ?? (matches.length === 1 ? matches[0].name : null);
+
   const product = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (q.length < 2) return null;
+    if (!activeName) return null;
+    const target = norm(activeName);
     const rows = items
-      .filter((i) => i.name.toLowerCase().includes(q) && i.unit_price > 0)
+      .filter((i) => norm(i.name) === target && i.unit_price > 0)
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date));
     if (rows.length === 0) return { rows, points: [], stats: null };
@@ -94,7 +137,7 @@ export default function GraficosClient({
         spent,
       },
     };
-  }, [items, query]);
+  }, [items, activeName]);
 
   /* ---------------- categorias no período ---------------- */
   const [range, setRange] = useState(6);
@@ -251,25 +294,76 @@ export default function GraficosClient({
         <h2 className="text-sm font-semibold text-ink-muted">
           Produto ao longo do tempo
         </h2>
-        <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3">
-          <Search className="h-4 w-4 shrink-0 text-ink-faint" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ex.: café, sabão, leite…"
-            className="w-full bg-transparent py-2.5 text-[15px] outline-none placeholder:text-ink-faint"
-          />
-        </div>
 
-        {product === null ? (
-          <p className="py-6 text-center text-sm text-ink-muted">
-            Digite ao menos 2 letras do nome do produto.
-          </p>
-        ) : product.rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-ink-muted">
-            Nada encontrado para “{query}”.
-          </p>
+        {activeName ? (
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span className="min-w-0 truncate rounded-lg border border-accent/40 bg-accent/10 px-2.5 py-1 text-sm font-medium text-ink">
+              {activeName}
+            </span>
+            <button
+              onClick={() => {
+                setChosen(null);
+                setQuery("");
+              }}
+              className="flex shrink-0 items-center gap-1 text-xs text-accent"
+            >
+              <X className="h-3 w-3" /> nova busca
+            </button>
+          </div>
         ) : (
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3">
+            <Search className="h-4 w-4 shrink-0 text-ink-faint" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ex.: café, sabão, leite…"
+              className="w-full bg-transparent py-2.5 text-[15px] outline-none placeholder:text-ink-faint"
+            />
+          </div>
+        )}
+
+        {!activeName && norm(query).length < 2 && (
+          <p className="py-6 text-center text-sm text-ink-muted">
+            Digite ao menos 2 letras para ver os produtos.
+          </p>
+        )}
+
+        {!activeName && norm(query).length >= 2 && matches.length === 0 && (
+          <p className="py-6 text-center text-sm text-ink-muted">
+            Nenhum produto com “{query}”.
+          </p>
+        )}
+
+        {!activeName && matches.length > 0 && (
+          <>
+            <p className="mt-3 px-1 text-xs text-ink-faint">
+              {matches.length} produto(s) — toque para ver o histórico
+            </p>
+            <ul className="mt-1.5 overflow-hidden rounded-xl border border-line">
+              {matches.map((m) => (
+                <li key={m.name}>
+                  <button
+                    onClick={() => setChosen(m.name)}
+                    className="flex w-full items-center gap-2 border-b border-line px-3 py-2.5 text-left text-sm last:border-b-0 active:bg-surface-2"
+                  >
+                    <span className="min-w-0 flex-1 truncate">{m.name}</span>
+                    <span className="shrink-0 text-xs text-ink-faint">
+                      {m.count}× · {formatBRL(m.last)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {product && product.rows.length === 0 && (
+          <p className="py-6 text-center text-sm text-ink-muted">
+            “{activeName}” ainda não tem preço registrado.
+          </p>
+        )}
+
+        {product && product.rows.length > 0 && (
           <>
             <div className="mt-4">
               <MiniLine points={product.points} />

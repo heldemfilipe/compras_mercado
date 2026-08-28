@@ -66,15 +66,11 @@ export default function MonthlyBars({
               <div className="h-px flex-1 bg-line" />
             </div>
           ))}
-          {/* média */}
+          {/* linha da média (valor fica no cabeçalho do card) */}
           <div
-            className="absolute inset-x-9 border-t border-dashed border-accent"
+            className="absolute inset-x-9 border-t border-dashed border-accent/60"
             style={{ top: `${(1 - avg / scaleMax) * 100}%` }}
-          >
-            <span className="absolute right-0 -top-4 rounded bg-bg px-1 text-[10px] font-medium text-ink-muted">
-              méd {formatBRL(avg)}
-            </span>
-          </div>
+          />
         </div>
 
         {/* barras */}

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getMarkets, getShoppingLists, getTemplates } from "@/lib/queries";
 import { formatBRL, formatMonthLabel, toMonthKey } from "@/lib/format";
 import NewListForm from "./new-list-form";
+import RegisterPurchaseButton from "./register-purchase-button";
 
 export const metadata: Metadata = { title: "Listas" };
 
@@ -50,12 +51,12 @@ export default async function ListasPage() {
               description="Gere uma lista a partir de um modelo acima para começar."
             />
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {active.map((l) => (
-                <li key={l.id}>
+                <li key={l.id} className="card space-y-3">
                   <Link
                     href={`/listas/${l.id}`}
-                    className="card flex items-center gap-3 active:bg-surface-2"
+                    className="flex items-center gap-3"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{l.title}</p>
@@ -85,6 +86,13 @@ export default async function ListasPage() {
                       )}
                     </div>
                   </Link>
+                  {l.total > 0 && (
+                    <RegisterPurchaseButton
+                      listId={l.id}
+                      total={l.total}
+                      checked={l.checked}
+                    />
+                  )}
                 </li>
               ))}
             </ul>

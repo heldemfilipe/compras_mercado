@@ -59,8 +59,9 @@ No painel do Supabase: **SQL Editor → New query**. Rode um de cada vez, nesta 
 1. [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) — tabelas, RLS e funções.
 2. [`supabase/migrations/0002_categorias_automaticas.sql`](supabase/migrations/0002_categorias_automaticas.sql) — **categorização automática**: todo item sem categoria recebe uma sozinho, a partir de palavras no nome (ex.: _"detergente" → Limpeza_, _"linguiça" → Carnes_). Você pode escolher na mão a qualquer momento.
 3. [`supabase/migrations/0003_sugestoes_produto.sql`](supabase/migrations/0003_sugestoes_produto.sql) — **autocomplete + comparação de preço** na tela de adicionar item (sugere produtos já comprados e mostra _"▲ 12% vs mês passado"_).
-4. (Opcional, recomendado) [`supabase/seed.sql`](supabase/seed.sql) — categorias, mercados de exemplo, o modelo _"Compra do mês"_ (baseado numa lista de caderno) e a lista do mês atual.
-5. (Opcional) [`supabase/examples/historico-assai.sql`](supabase/examples/historico-assai.sql) — um ano de compras de exemplo para os gráficos já nascerem com dados. Cada mês fecha no total exato.
+4. [`supabase/migrations/0004_registrar_compra.sql`](supabase/migrations/0004_registrar_compra.sql) — melhora o "Registrar compra" (lista → compra do mês): nasce _aberta_ quando falta preço, para você completar depois.
+5. (Opcional, recomendado) [`supabase/seed.sql`](supabase/seed.sql) — categorias, mercados de exemplo, o modelo _"Compra do mês"_ (baseado numa lista de caderno) e a lista do mês atual.
+6. (Opcional) [`supabase/examples/historico-assai.sql`](supabase/examples/historico-assai.sql) — um ano de compras de exemplo para os gráficos já nascerem com dados. Cada mês fecha no total exato.
 
 ### 4. Copie as chaves de API
 
