@@ -1,0 +1,126 @@
+"use client";
+
+import { useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
+import { formatQty } from "@/lib/format";
+import { deleteTemplateItem, updateTemplateItem } from "../actions";
+
+type Cat = { id: string; name: string };
+type Item = {
+  id: string;
+  name: string;
+  quantity: number;
+  is_weight: boolean;
+  category: { id: string; name: string; color: string | null } | null;
+};
+
+export default function TemplateItemRow({
+  item,
+  templateId,
+  categories,
+}: {
+  item: Item;
+  templateId: string;
+  categories: Cat[];
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <li className="border-b border-line bg-surface-2 p-3 last:border-b-0">
+        <form
+          action={async (fd) => {
+            await updateTemplateItem(fd);
+            setEditing(false);
+          }}
+          className="space-y-2"
+        >
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="template_id" value={templateId} />
+          <div className="flex gap-2">
+            <input
+              name="name"
+              defaultValue={item.name}
+              required
+              className="input flex-1"
+            />
+            <input
+              name="quantity"
+              inputMode="decimal"
+              defaultValue={formatQty(item.quantity)}
+              aria-label="Quantidade"
+              className="input w-16 text-center"
+            />
+          </div>
+          {categories.length > 0 && (
+            <select
+              name="category_id"
+              defaultValue={item.category?.id ?? ""}
+              className="input"
+            >
+              <option value="">Sem categoria</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
+          <label className="flex items-center gap-2 text-sm text-ink-muted">
+            <input
+              type="checkbox"
+              name="is_weight"
+              defaultChecked={item.is_weight}
+              className="h-4 w-4 accent-[#3b82f6]"
+            />
+            Por peso
+          </label>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="btn-ghost btn-sm flex-1"
+            >
+              <X className="h-3.5 w-3.5" /> Cancelar
+            </button>
+            <button type="submit" className="btn btn-sm flex-1">
+              Salvar
+            </button>
+          </div>
+        </form>
+        <form
+          action={deleteTemplateItem}
+          className="mt-2 border-t border-line pt-2 text-center"
+        >
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="template_id" value={templateId} />
+          <button className="text-sm text-negative">
+            <Trash2 className="mr-1 inline h-3.5 w-3.5" />
+            Remover do modelo
+          </button>
+        </form>
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{item.name}</p>
+        <p className="text-xs text-ink-muted">
+          {item.is_weight
+            ? `${formatQty(item.quantity)} kg`
+            : `${formatQty(item.quantity)}×`}
+          {item.category ? ` · ${item.category.name}` : ""}
+        </p>
+      </div>
+      <button
+        onClick={() => setEditing(true)}
+        className="shrink-0 rounded-lg p-2 text-ink-faint hover:text-ink"
+        aria-label="Editar item"
+      >
+        <Pencil className="h-4 w-4" />
+      </button>
+    </li>
+  );
+}
