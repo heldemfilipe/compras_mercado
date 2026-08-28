@@ -9,6 +9,7 @@ type Item = {
   name: string;
   quantity: number;
   is_weight: boolean;
+  unit: "un" | "kg" | "g";
   unit_price: number | null;
   checked: boolean;
   note: string | null;

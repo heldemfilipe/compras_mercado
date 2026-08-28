@@ -15,10 +15,22 @@ async function db() {
 }
 
 function num(v: FormDataEntryValue | null, fallback = 0): number {
-  const s = String(v ?? "").trim();
+  let s = String(v ?? "").trim();
   if (s === "") return fallback;
-  const n = Number(s.replace(",", "."));
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  const n = Number(s.replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : fallback;
+}
+
+function unitOf(v: FormDataEntryValue | null): "un" | "kg" | "g" {
+  const s = String(v ?? "un");
+  return s === "kg" || s === "g" ? s : "un";
+}
+
+/** Quantidade guardada: peso sempre em kg (300 g -> 0,3). */
+function storedQty(input: number, unit: "un" | "kg" | "g"): number {
+  const n = Number.isFinite(input) ? input : 0;
+  return unit === "g" ? n / 1000 : n;
 }
 
 /** Aceita "YYYY-MM" (input type=month) ou "YYYY-MM-DD" e devolve o 1º dia do mês. */
@@ -100,7 +112,9 @@ export async function addListItem(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!list_id || !name) return;
   const category_id = String(formData.get("category_id") ?? "") || null;
-  const quantity = num(formData.get("quantity"), 1) || 1;
+  const unit = unitOf(formData.get("unit"));
+  let quantity = storedQty(num(formData.get("quantity"), 1), unit);
+  if (unit === "un" && quantity < 1) quantity = 1;
   const priceRaw = String(formData.get("unit_price") ?? "").trim();
   const unit_price = priceRaw === "" ? null : num(formData.get("unit_price"), 0);
 
@@ -118,6 +132,7 @@ export async function addListItem(formData: FormData) {
     name,
     category_id,
     quantity,
+    unit,
     unit_price,
     sort_order: (last?.sort_order ?? 0) + 1,
   });
@@ -136,8 +151,11 @@ export async function setListItemField(formData: FormData) {
     const raw = String(formData.get("unit_price") ?? "").trim();
     patch.unit_price = raw === "" ? null : num(formData.get("unit_price"), 0);
   }
+  if (formData.has("unit")) patch.unit = unitOf(formData.get("unit"));
   if (formData.has("quantity")) {
-    patch.quantity = num(formData.get("quantity"), 1) || 1;
+    const u = (patch.unit as "un" | "kg" | "g") ?? "un";
+    const q = storedQty(num(formData.get("quantity"), 1), u);
+    patch.quantity = u === "un" && q < 1 ? 1 : q;
   }
   if (Object.keys(patch).length === 0) return;
 
@@ -167,11 +185,14 @@ export async function updateListItem(formData: FormData) {
   if (!id) return;
 
   const priceRaw = String(formData.get("unit_price") ?? "").trim();
+  const unit = unitOf(formData.get("unit"));
+  let quantity = storedQty(num(formData.get("quantity"), 1), unit);
+  if (unit === "un" && quantity < 1) quantity = 1;
   const patch: Record<string, unknown> = {
     name: String(formData.get("name") ?? "").trim(),
-    quantity: num(formData.get("quantity"), 1) || 1,
+    quantity,
+    unit,
     unit_price: priceRaw === "" ? null : num(formData.get("unit_price"), 0),
-    is_weight: String(formData.get("is_weight") ?? "") === "on",
     note: String(formData.get("note") ?? "").trim() || null,
     category_id: String(formData.get("category_id") ?? "") || null,
   };

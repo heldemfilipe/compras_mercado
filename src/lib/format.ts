@@ -16,6 +16,26 @@ export function formatQty(value: number | null | undefined): string {
   return NUM3.format(Number(value ?? 0));
 }
 
+export type Unit = "un" | "kg" | "g";
+
+/** Rótulo curto da quantidade conforme a unidade. `quantity` de peso vem em kg. */
+export function formatAmount(quantity: number, unit: Unit): string {
+  if (unit === "kg") return `${formatQty(quantity)} kg`;
+  if (unit === "g") return `${formatQty(Math.round(quantity * 1000))} g`;
+  return `${formatQty(quantity)}×`;
+}
+
+/** Valor numérico que o usuário edita, a partir da quantity guardada (kg p/ peso). */
+export function displayAmount(quantity: number, unit: Unit): number {
+  return unit === "g" ? Math.round(quantity * 1000) : quantity;
+}
+
+/** Converte o que o usuário digitou para a quantity guardada (kg p/ peso). */
+export function toStoredQuantity(input: number, unit: Unit): number {
+  const n = Number.isFinite(input) ? input : 0;
+  return unit === "g" ? n / 1000 : n;
+}
+
 /** "2026-08-28" ou Date -> "28 de agosto de 2026" */
 export function formatLongDate(input: string | Date): string {
   const d = typeof input === "string" ? parseISODate(input) : input;

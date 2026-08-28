@@ -83,7 +83,10 @@ export async function addTemplateItem(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!template_id || !name) return;
   const category_id = String(formData.get("category_id") ?? "") || null;
-  const quantity = num(formData.get("quantity"), 1);
+  const unitRaw = String(formData.get("unit") ?? "");
+  const unit = unitRaw === "kg" || unitRaw === "g" ? unitRaw : "un";
+  const rawQty = num(formData.get("quantity"), 1);
+  const quantity = unit === "g" ? rawQty / 1000 : rawQty || 1;
 
   const { supabase } = await db();
   const { data: last } = await supabase
@@ -99,6 +102,7 @@ export async function addTemplateItem(formData: FormData) {
     name,
     category_id,
     quantity,
+    unit,
     sort_order: (last?.sort_order ?? 0) + 1,
   });
   revalidatePath(`/listas/modelos/${template_id}`);
@@ -108,10 +112,13 @@ export async function updateTemplateItem(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const template_id = String(formData.get("template_id") ?? "");
   if (!id) return;
+  const unitRaw = String(formData.get("unit") ?? "");
+  const unit = unitRaw === "kg" || unitRaw === "g" ? unitRaw : "un";
+  const rawQty = num(formData.get("quantity"), 1);
   const patch: Record<string, unknown> = {
     name: String(formData.get("name") ?? "").trim(),
-    quantity: num(formData.get("quantity"), 1),
-    is_weight: String(formData.get("is_weight") ?? "") === "on",
+    quantity: (unit === "g" ? rawQty / 1000 : rawQty) || 1,
+    unit,
     category_id: String(formData.get("category_id") ?? "") || null,
   };
   if (!patch.name) return;

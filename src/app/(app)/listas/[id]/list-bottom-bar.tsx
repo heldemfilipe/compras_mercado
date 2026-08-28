@@ -1,84 +1,76 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Minus, Plus, ShoppingCart, Sparkles } from "lucide-react";
+import { Minus, Plus, Sparkles } from "lucide-react";
 import { guessCategoryName } from "@/lib/categorize";
-import { addListItem, convertListToPurchase } from "../actions";
+import type { Unit } from "@/lib/format";
+import UnitPicker from "@/components/unit-picker";
+import { addListItem } from "../actions";
 
-type Cat = { id: string; name: string };
-
-export default function ListBottomBar({
-  listId,
-  categories,
-  itemCount,
-  checkedCount,
-  locked,
-}: {
-  listId: string;
-  categories: Cat[];
-  itemCount: number;
-  checkedCount: number;
-  locked: boolean;
-}) {
+export default function ListBottomBar({ listId }: { listId: string }) {
   const ref = useRef<HTMLFormElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [qty, setQty] = useState(1);
   const [name, setName] = useState("");
-  const [catId, setCatId] = useState("");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState<Unit>("un");
+  const [qty, setQty] = useState(1);
+  const [amount, setAmount] = useState("");
 
-  const guess = catId === "" ? guessCategoryName(name) : null;
+  const guess = guessCategoryName(name);
+  const qtyValue = unit === "un" ? String(qty) : amount || "0";
+
+  function reset() {
+    setName("");
+    setPrice("");
+    setUnit("un");
+    setQty(1);
+    setAmount("");
+    ref.current?.reset();
+  }
 
   return (
     <div className="border-t border-line bg-surface p-3">
-      {!locked && (
-        <form
-          ref={ref}
-          action={async (fd) => {
-            await addListItem(fd);
-            ref.current?.reset();
-            setName("");
-            setQty(1);
-            setCatId("");
-            ref.current
-              ?.querySelector<HTMLInputElement>('[name="name"]')
-              ?.focus();
-          }}
-          className="space-y-2"
-        >
-          <input type="hidden" name="list_id" value={listId} />
+      <form
+        ref={ref}
+        action={async (fd) => {
+          await addListItem(fd);
+          reset();
+          ref.current
+            ?.querySelector<HTMLInputElement>('[name="name"]')
+            ?.focus();
+        }}
+        className="space-y-2"
+      >
+        <input type="hidden" name="list_id" value={listId} />
+        <input type="hidden" name="unit" value={unit} />
+        <input type="hidden" name="quantity" value={qtyValue} />
 
-          <div className="flex gap-2">
+        <input
+          name="name"
+          required
+          autoComplete="off"
+          placeholder="Produto"
+          className="input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <div className="flex items-center gap-2">
+          <div className="relative w-24 shrink-0">
+            <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-faint">
+              R$
+            </span>
             <input
-              name="name"
-              required
-              autoComplete="off"
-              placeholder="Adicionar item à lista…"
-              className="input flex-1"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              name="unit_price"
+              inputMode="decimal"
+              placeholder="0,00"
+              aria-label="Valor unitário"
+              className="input w-full pl-8 pr-2 text-right"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
             />
-            <div className="relative w-24 shrink-0">
-              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-faint">
-                R$
-              </span>
-              <input
-                name="unit_price"
-                inputMode="decimal"
-                placeholder="0,00"
-                aria-label="Valor (opcional)"
-                className="input w-full pl-8 pr-2 text-right"
-              />
-            </div>
-            <button
-              type="submit"
-              className="btn shrink-0 !px-3"
-              aria-label="Adicionar"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          {unit === "un" ? (
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -88,13 +80,9 @@ export default function ListBottomBar({
               >
                 <Minus className="h-4 w-4" />
               </button>
-              <input
-                name="quantity"
-                readOnly
-                value={qty}
-                aria-label="Quantidade"
-                className="w-8 bg-transparent text-center text-[15px] font-semibold"
-              />
+              <span className="w-6 text-center text-[15px] font-semibold">
+                {qty}
+              </span>
               <button
                 type="button"
                 onClick={() => setQty((q) => q + 1)}
@@ -104,58 +92,32 @@ export default function ListBottomBar({
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-
-            {categories.length > 0 && (
-              <select
-                name="category_id"
-                aria-label="Categoria"
-                className="input flex-1"
-                value={catId}
-                onChange={(e) => setCatId(e.target.value)}
-              >
-                <option value="">Categoria: automática</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {guess && (
-            <p className="flex items-center gap-1 px-1 text-xs text-ink-faint">
-              <Sparkles className="h-3 w-3" />
-              <span className="text-ink-muted">{guess}</span>
-            </p>
+          ) : (
+            <input
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={unit === "kg" ? "kg" : "g"}
+              aria-label={`Quantidade em ${unit}`}
+              className="input w-16 text-center"
+            />
           )}
-        </form>
-      )}
 
-      {!locked && (
-        <form
-          action={async (fd) => {
-            const msg =
-              checkedCount > 0
-                ? `Registrar compra com os ${checkedCount} itens marcados?`
-                : `Nenhum item marcado. Registrar compra com todos os ${itemCount} itens?`;
-            if (!confirm(msg)) return;
-            setBusy(true);
-            try {
-              await convertListToPurchase(fd);
-            } finally {
-              setBusy(false);
-            }
-          }}
-          className="mt-2"
-        >
-          <input type="hidden" name="id" value={listId} />
-          <button className="btn w-full" disabled={busy || itemCount === 0}>
-            <ShoppingCart className="h-4 w-4" />
-            Registrar compra
-          </button>
-        </form>
-      )}
+          <UnitPicker value={unit} onChange={setUnit} />
+        </div>
+
+        {guess && name.trim().length >= 2 && (
+          <p className="flex items-center gap-1 px-1 text-xs text-ink-faint">
+            <Sparkles className="h-3 w-3" />
+            <span className="text-ink-muted">{guess}</span>
+          </p>
+        )}
+
+        <button type="submit" className="btn w-full">
+          <Plus className="h-4 w-4" />
+          Incluir
+        </button>
+      </form>
     </div>
   );
 }

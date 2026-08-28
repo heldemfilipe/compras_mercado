@@ -8,6 +8,7 @@ import { getCategories, getMarkets, getShoppingList } from "@/lib/queries";
 import { formatBRL, formatMonthLabel, toMonthKey } from "@/lib/format";
 import ListItemsView from "./list-items-view";
 import ListBottomBar from "./list-bottom-bar";
+import RegisterPurchaseFab from "./register-purchase-fab";
 import ListActions from "./list-actions";
 import { updateListMeta } from "../actions";
 
@@ -47,7 +48,7 @@ export default async function ListaDetailPage({
         action={<ListActions id={list.id} status={list.status} />}
       />
 
-      <div className="p-4 pb-44">
+      <div className="p-4 pb-56">
         {locked && list.purchase_id && (
           <Link
             href={`/compras/${list.purchase_id}`}
@@ -129,17 +130,21 @@ export default async function ListaDetailPage({
         />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50">
-        <div className="mx-auto w-full max-w-md">
-          <ListBottomBar
+      {!locked && (
+        <>
+          <RegisterPurchaseFab
             listId={list.id}
-            categories={categories}
+            total={estimated}
             itemCount={list.items.length}
             checkedCount={checkedCount}
-            locked={locked}
           />
-        </div>
-      </div>
+          <div className="fixed inset-x-0 bottom-0 z-40">
+            <div className="mx-auto w-full max-w-md">
+              <ListBottomBar listId={list.id} />
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

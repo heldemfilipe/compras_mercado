@@ -92,6 +92,7 @@ export interface PurchaseDetail {
     unit_price: number;
     total: number;
     is_weight: boolean;
+    unit: "un" | "kg" | "g";
     category: { id: string; name: string; color: string | null } | null;
   }[];
   total: number;
@@ -107,7 +108,7 @@ export async function getPurchase(
       `id, purchase_date, status, note,
        markets ( id, name ),
        purchase_items (
-         id, name, quantity, unit_price, total, is_weight, created_at,
+         id, name, quantity, unit_price, total, is_weight, unit, created_at,
          categories ( id, name, color )
        )`,
     )
@@ -126,6 +127,7 @@ export async function getPurchase(
       unit_price: Number(it.unit_price ?? 0),
       total: Number(it.total ?? 0),
       is_weight: Boolean(it.is_weight),
+      unit: ((it.unit as string) ?? "un") as "un" | "kg" | "g",
       created_at: it.created_at as string,
       category: (it.categories ?? null) as PurchaseDetail["items"][number]["category"],
     }))
@@ -274,6 +276,7 @@ export interface ShoppingListDetail {
     name: string;
     quantity: number;
     is_weight: boolean;
+    unit: "un" | "kg" | "g";
     unit_price: number | null;
     checked: boolean;
     note: string | null;
@@ -291,7 +294,7 @@ export async function getShoppingList(
     .select(
       `id, title, reference_month, status, market_id, purchase_id,
        shopping_list_items (
-         id, name, quantity, is_weight, unit_price, checked, note, sort_order,
+         id, name, quantity, is_weight, unit, unit_price, checked, note, sort_order,
          categories ( id, name, color )
        )`,
     )
@@ -308,6 +311,7 @@ export async function getShoppingList(
       name: it.name as string,
       quantity: Number(it.quantity ?? 0),
       is_weight: Boolean(it.is_weight),
+      unit: ((it.unit as string) ?? "un") as "un" | "kg" | "g",
       unit_price: it.unit_price == null ? null : Number(it.unit_price),
       checked: Boolean(it.checked),
       note: (it.note ?? null) as string | null,
@@ -363,6 +367,7 @@ export interface TemplateDetail {
     name: string;
     quantity: number;
     is_weight: boolean;
+    unit: "un" | "kg" | "g";
     sort_order: number;
     category: { id: string; name: string; color: string | null } | null;
   }[];
@@ -377,7 +382,7 @@ export async function getTemplate(
     .select(
       `id, name, is_default,
        list_template_items (
-         id, name, quantity, is_weight, sort_order,
+         id, name, quantity, is_weight, unit, sort_order,
          categories ( id, name, color )
        )`,
     )
@@ -394,6 +399,7 @@ export async function getTemplate(
       name: it.name as string,
       quantity: Number(it.quantity ?? 0),
       is_weight: Boolean(it.is_weight),
+      unit: ((it.unit as string) ?? "un") as "un" | "kg" | "g",
       sort_order: Number(it.sort_order ?? 0),
       category: (it.categories ?? null) as TemplateDetail["items"][number]["category"],
     }))

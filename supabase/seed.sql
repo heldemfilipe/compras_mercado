@@ -54,8 +54,9 @@ begin
     returning id into v_tpl;
 
     insert into public.list_template_items
-      (template_id, name, quantity, is_weight, sort_order, category_id)
-    select v_tpl, x.name, x.qty, x.weight, x.ord,
+      (template_id, name, quantity, unit, sort_order, category_id)
+    select v_tpl, x.name, x.qty,
+           case when x.weight then 'kg' else 'un' end, x.ord,
            (select id from public.categories where name = x.cat)
     from (values
       -- Limpeza / Higiene

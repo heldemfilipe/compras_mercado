@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
-import { formatBRL, formatQty } from "@/lib/format";
+import {
+  formatBRL,
+  formatAmount,
+  displayAmount,
+  type Unit,
+} from "@/lib/format";
+import UnitPicker, { convertAmount } from "@/components/unit-picker";
 import { deleteItem, updateItem } from "../actions";
 
 type Cat = { id: string; name: string };
@@ -13,7 +19,13 @@ type Item = {
   unit_price: number;
   total: number;
   is_weight: boolean;
+  unit: Unit;
   category: { id: string; name: string; color: string | null } | null;
+};
+
+const toNum = (s: string) => {
+  const n = Number(String(s).replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
 };
 
 export default function ItemRow({
@@ -28,6 +40,10 @@ export default function ItemRow({
   editable: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const [eUnit, setEUnit] = useState<Unit>(item.unit);
+  const [eAmt, setEAmt] = useState(
+    String(displayAmount(item.quantity, item.unit)),
+  );
 
   if (editing) {
     return (
@@ -56,37 +72,37 @@ export default function ItemRow({
             />
           </div>
           <div className="flex items-center gap-2">
+            <input type="hidden" name="unit" value={eUnit} />
             <input
               name="quantity"
               inputMode="decimal"
-              defaultValue={formatQty(item.quantity)}
+              value={eAmt}
+              onChange={(e) => setEAmt(e.target.value)}
               aria-label="Quantidade"
-              className="input w-20 text-center"
+              className="input w-16 text-center"
             />
-            {categories.length > 0 && (
-              <select
-                name="category_id"
-                defaultValue={item.category?.id ?? ""}
-                className="input flex-1"
-              >
-                <option value="">Automático (pela descrição)</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            <UnitPicker
+              value={eUnit}
+              onChange={(u) => {
+                setEAmt(String(convertAmount(toNum(eAmt), eUnit, u)));
+                setEUnit(u);
+              }}
+            />
           </div>
-          <label className="flex items-center gap-2 text-sm text-ink-muted">
-            <input
-              type="checkbox"
-              name="is_weight"
-              defaultChecked={item.is_weight}
-              className="h-4 w-4 accent-[#3b82f6]"
-            />
-            Por peso
-          </label>
+          {categories.length > 0 && (
+            <select
+              name="category_id"
+              defaultValue={item.category?.id ?? ""}
+              className="input"
+            >
+              <option value="">Automático (pela descrição)</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -120,9 +136,10 @@ export default function ItemRow({
     <li className="flex items-center gap-3 border-b border-line bg-surface px-4 py-3 last:border-b-0">
       <div className="min-w-0 flex-1">
         <p className="text-sm text-ink-muted">
-          {item.is_weight
-            ? `${formatQty(item.quantity)} kg × ${formatBRL(item.unit_price)}`
-            : `${formatQty(item.quantity)}× ${formatBRL(item.unit_price)}`}
+          {formatAmount(item.quantity, item.unit)}{" "}
+          {item.unit === "un" ? "" : "× "}
+          {formatBRL(item.unit_price)}
+          {item.unit !== "un" ? "/kg" : ""}
         </p>
         <p className="truncate font-medium">{item.name}</p>
         {item.category && (

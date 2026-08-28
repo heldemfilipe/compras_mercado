@@ -7,7 +7,7 @@ partir de modelos reaproveitáveis e acompanha a evolução dos gastos em gráfi
 Inspirado no app _SOMA_, com login na frente, listas de compras e comparação de
 gastos entre meses e entre produtos.
 
-- **Stack:** Next.js 15 (App Router) + Supabase (Postgres + Auth) + Tailwind CSS v4 + Recharts
+- **Stack:** Next.js 15 (App Router) + Supabase (Postgres + Auth) + Tailwind CSS v4
 - **Deploy:** Vercel (grátis) + Supabase (grátis)
 - **Feito para celular** (mobile-first, tema escuro, instalável como PWA)
 
@@ -23,7 +23,7 @@ gastos entre meses e entre produtos.
 | **Login** | Tela de entrada com e-mail e senha. Sem cadastro público. |
 | **Compras** | Escolhe o mercado, a data e vai lançando `produto → valor → quantidade` (ou por peso). Agrupadas por mês, com total por compra e por mês. **Importar compra**: cola a lista inteira (ex.: itens do SOMA) e ela entra de uma vez, já categorizada. |
 | **Categorias** | Automáticas pelo nome do produto (offline, sem IA) e sempre editáveis. Deixe em _"Automático"_ ou escolha na mão. |
-| **Listas** | Lista do mês com itens marcáveis, estimativa de gasto e botão **"Registrar compra"** que transforma a lista numa compra. |
+| **Listas** | A lista É a compra: marca o item, digita o **preço** e a **unidade (Un/Kg/g)** na própria linha; total parcial no topo; botão flutuante 🛒 finaliza como compra do mês. |
 | **Modelos** | Modelos de lista reaproveitáveis (ex.: _"Compra do mês"_). Marque um como padrão e gere a lista do mês em 1 toque. |
 | **Gráficos** | Gasto por mês num gráfico onde você **toca nos meses para fixar e comparar** (total, vs média, por categoria), histórico de preço de um produto e gasto por categoria no período. |
 | **Ajustes** | Cadastro de mercados e categorias, nome de exibição e logout. |
@@ -60,8 +60,9 @@ No painel do Supabase: **SQL Editor → New query**. Rode um de cada vez, nesta 
 2. [`supabase/migrations/0002_categorias_automaticas.sql`](supabase/migrations/0002_categorias_automaticas.sql) — **categorização automática**: todo item sem categoria recebe uma sozinho, a partir de palavras no nome (ex.: _"detergente" → Limpeza_, _"linguiça" → Carnes_). Você pode escolher na mão a qualquer momento.
 3. [`supabase/migrations/0003_sugestoes_produto.sql`](supabase/migrations/0003_sugestoes_produto.sql) — **autocomplete + comparação de preço** na tela de adicionar item (sugere produtos já comprados e mostra _"▲ 12% vs mês passado"_).
 4. [`supabase/migrations/0004_registrar_compra.sql`](supabase/migrations/0004_registrar_compra.sql) — melhora o "Registrar compra" (lista → compra do mês): nasce _aberta_ quando falta preço, para você completar depois.
-5. (Opcional, recomendado) [`supabase/seed.sql`](supabase/seed.sql) — categorias, mercados de exemplo, o modelo _"Compra do mês"_ (baseado numa lista de caderno) e a lista do mês atual.
-6. (Opcional) [`supabase/examples/historico-assai.sql`](supabase/examples/historico-assai.sql) — um ano de compras de exemplo para os gráficos já nascerem com dados. Cada mês fecha no total exato.
+5. [`supabase/migrations/0005_unidade.sql`](supabase/migrations/0005_unidade.sql) — unidade do item: **Un / Kg / g**.
+6. (Opcional, recomendado) [`supabase/seed.sql`](supabase/seed.sql) — categorias, mercados de exemplo, o modelo _"Compra do mês"_ (baseado numa lista de caderno) e a lista do mês atual.
+7. (Opcional) [`supabase/examples/historico-assai.sql`](supabase/examples/historico-assai.sql) — um ano de compras de exemplo para os gráficos já nascerem com dados. Cada mês fecha no total exato.
 
 ### 4. Copie as chaves de API
 

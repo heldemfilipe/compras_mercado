@@ -3,7 +3,13 @@
 import { useMemo, useRef, useState } from "react";
 import { Minus, Plus, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { guessCategoryName } from "@/lib/categorize";
-import { formatBRL, formatMonthShort, parseMoneyInput } from "@/lib/format";
+import {
+  formatBRL,
+  formatMonthShort,
+  parseMoneyInput,
+  type Unit,
+} from "@/lib/format";
+import UnitPicker from "@/components/unit-picker";
 import type { ProductSuggestion } from "@/lib/queries";
 import { addItem } from "../actions";
 
@@ -27,7 +33,7 @@ export default function AddItemForm({
 }) {
   const ref = useRef<HTMLFormElement>(null);
   const priceRef = useRef<HTMLInputElement>(null);
-  const [isWeight, setIsWeight] = useState(false);
+  const [unit, setUnit] = useState<Unit>("un");
   const [qty, setQty] = useState(1);
   const [pending, setPending] = useState(false);
   const [name, setName] = useState("");
@@ -83,7 +89,7 @@ export default function AddItemForm({
     setCatId("");
     setPrice("");
     setQty(1);
-    setIsWeight(false);
+    setUnit("un");
     setPicked(null);
     setOpen(false);
   }
@@ -253,16 +259,7 @@ export default function AddItemForm({
           </select>
         )}
 
-        {isWeight ? (
-          <input
-            name="quantity"
-            inputMode="decimal"
-            defaultValue=""
-            placeholder="kg"
-            aria-label="Peso em kg"
-            className="input w-24 text-center"
-          />
-        ) : (
+        {unit === "un" ? (
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -276,7 +273,7 @@ export default function AddItemForm({
               name="quantity"
               readOnly
               value={qty}
-              className="w-10 bg-transparent text-center text-[15px] font-semibold"
+              className="w-9 bg-transparent text-center text-[15px] font-semibold"
               aria-label="Quantidade"
             />
             <button
@@ -288,20 +285,20 @@ export default function AddItemForm({
               <Plus className="h-4 w-4" />
             </button>
           </div>
+        ) : (
+          <input
+            name="quantity"
+            inputMode="decimal"
+            defaultValue=""
+            placeholder={unit}
+            aria-label={`Quantidade em ${unit}`}
+            className="input w-16 text-center"
+          />
         )}
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm text-ink-muted">
-          <input
-            type="checkbox"
-            name="is_weight"
-            checked={isWeight}
-            onChange={(e) => setIsWeight(e.target.checked)}
-            className="h-4 w-4 accent-[#3b82f6]"
-          />
-          Por peso (preço por kg)
-        </label>
+        <UnitPicker value={unit} onChange={setUnit} name="unit" />
         <button type="submit" className="btn btn-sm" disabled={pending}>
           Incluir
         </button>

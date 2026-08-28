@@ -81,8 +81,15 @@ export async function addItem(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!purchase_id || !name) return;
 
-  const is_weight = String(formData.get("is_weight") ?? "") === "on";
-  const quantity = num(formData.get("quantity"), 1);
+  const unitRaw = String(formData.get("unit") ?? "");
+  const unit: "un" | "kg" | "g" =
+    unitRaw === "kg" || unitRaw === "g"
+      ? unitRaw
+      : String(formData.get("is_weight") ?? "") === "on"
+        ? "kg"
+        : "un";
+  const rawQty = num(formData.get("quantity"), 1);
+  const quantity = unit === "g" ? rawQty / 1000 : rawQty;
   const unit_price = num(formData.get("unit_price"), 0);
   const category_id = String(formData.get("category_id") ?? "") || null;
 
@@ -90,8 +97,8 @@ export async function addItem(formData: FormData) {
   await supabase.from("purchase_items").insert({
     purchase_id,
     name,
-    is_weight,
-    quantity: quantity || (is_weight ? 0 : 1),
+    unit,
+    quantity: quantity || (unit === "un" ? 1 : 0),
     unit_price,
     category_id,
   });
@@ -105,11 +112,19 @@ export async function updateItem(formData: FormData) {
   const purchase_id = String(formData.get("purchase_id") ?? "");
   if (!id) return;
 
+  const unitRaw = String(formData.get("unit") ?? "");
+  const unit: "un" | "kg" | "g" =
+    unitRaw === "kg" || unitRaw === "g"
+      ? unitRaw
+      : String(formData.get("is_weight") ?? "") === "on"
+        ? "kg"
+        : "un";
+  const rawQty = num(formData.get("quantity"), 1);
   const patch: Record<string, unknown> = {
     name: String(formData.get("name") ?? "").trim(),
-    quantity: num(formData.get("quantity"), 1),
+    quantity: (unit === "g" ? rawQty / 1000 : rawQty) || (unit === "un" ? 1 : 0),
+    unit,
     unit_price: num(formData.get("unit_price"), 0),
-    is_weight: String(formData.get("is_weight") ?? "") === "on",
     category_id: String(formData.get("category_id") ?? "") || null,
   };
   if (!patch.name) return;

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
-import { formatQty } from "@/lib/format";
+import { formatAmount, displayAmount, type Unit } from "@/lib/format";
+import UnitPicker, { convertAmount } from "@/components/unit-picker";
 import { deleteTemplateItem, updateTemplateItem } from "../actions";
 
 type Cat = { id: string; name: string };
@@ -11,7 +12,13 @@ type Item = {
   name: string;
   quantity: number;
   is_weight: boolean;
+  unit: Unit;
   category: { id: string; name: string; color: string | null } | null;
+};
+
+const toNum = (s: string) => {
+  const n = Number(String(s).replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
 };
 
 export default function TemplateItemRow({
@@ -24,6 +31,10 @@ export default function TemplateItemRow({
   categories: Cat[];
 }) {
   const [editing, setEditing] = useState(false);
+  const [eUnit, setEUnit] = useState<Unit>(item.unit);
+  const [eAmt, setEAmt] = useState(
+    String(displayAmount(item.quantity, item.unit)),
+  );
 
   if (editing) {
     return (
@@ -37,19 +48,28 @@ export default function TemplateItemRow({
         >
           <input type="hidden" name="id" value={item.id} />
           <input type="hidden" name="template_id" value={templateId} />
-          <div className="flex gap-2">
-            <input
-              name="name"
-              defaultValue={item.name}
-              required
-              className="input flex-1"
-            />
+          <input type="hidden" name="unit" value={eUnit} />
+          <input
+            name="name"
+            defaultValue={item.name}
+            required
+            className="input"
+          />
+          <div className="flex items-center gap-2">
             <input
               name="quantity"
               inputMode="decimal"
-              defaultValue={formatQty(item.quantity)}
+              value={eAmt}
+              onChange={(e) => setEAmt(e.target.value)}
               aria-label="Quantidade"
               className="input w-16 text-center"
+            />
+            <UnitPicker
+              value={eUnit}
+              onChange={(u) => {
+                setEAmt(String(convertAmount(toNum(eAmt), eUnit, u)));
+                setEUnit(u);
+              }}
             />
           </div>
           {categories.length > 0 && (
@@ -66,15 +86,6 @@ export default function TemplateItemRow({
               ))}
             </select>
           )}
-          <label className="flex items-center gap-2 text-sm text-ink-muted">
-            <input
-              type="checkbox"
-              name="is_weight"
-              defaultChecked={item.is_weight}
-              className="h-4 w-4 accent-[#3b82f6]"
-            />
-            Por peso
-          </label>
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -108,9 +119,7 @@ export default function TemplateItemRow({
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{item.name}</p>
         <p className="text-xs text-ink-muted">
-          {item.is_weight
-            ? `${formatQty(item.quantity)} kg`
-            : `${formatQty(item.quantity)}×`}
+          {formatAmount(item.quantity, item.unit)}
           {item.category ? ` · ${item.category.name}` : ""}
         </p>
       </div>
