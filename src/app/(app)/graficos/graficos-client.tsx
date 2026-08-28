@@ -124,7 +124,7 @@ export default function GraficosClient({
       <section className="card">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold text-ink-muted">Gastos por mês</h2>
-          <span className="text-xs text-ink-faint">média {formatBRL(avg)}</span>
+          <span className="text-xs text-ink-muted">média {formatBRL(avg)}</span>
         </div>
         <div className="mt-3">
           <MonthlyBars

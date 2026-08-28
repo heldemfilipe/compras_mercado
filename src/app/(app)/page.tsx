@@ -3,6 +3,8 @@ import {
   ArrowRight,
   ShoppingCart,
   ListPlus,
+  ListChecks,
+  Pencil,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
@@ -12,6 +14,7 @@ import {
   getMonthlyTotals,
   getProfileName,
   getPurchasesWithTotals,
+  getShoppingLists,
 } from "@/lib/queries";
 import {
   formatBRL,
@@ -25,17 +28,25 @@ import CategoryBars, { type CatDatum } from "@/components/charts/category-bars";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const [name, monthly, items, recent] = await Promise.all([
+  const [name, monthly, items, recent, open, lists] = await Promise.all([
     getProfileName(supabase),
     getMonthlyTotals(supabase, 12),
     getFlatItems(supabase, 2),
     getPurchasesWithTotals(supabase, 5),
+    getPurchasesWithTotals(supabase, 10, "aberta"),
+    getShoppingLists(supabase),
   ]);
 
   const now = new Date();
   const thisKey = toMonthKey(now);
   const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const prevKey = toMonthKey(prev);
+
+  const openIds = new Set(open.map((p) => p.id));
+  const recentDone = recent.filter((p) => !openIds.has(p.id));
+  const activeLists = lists.filter(
+    (l) => l.status === "ativa" && l.total > 0 && l.checked < l.total,
+  );
 
   const thisMonth = monthly.find((m) => m.month === thisKey);
   const prevMonth = monthly.find((m) => m.month === prevKey);
@@ -80,6 +91,54 @@ export default async function DashboardPage() {
           Ajustes
         </Link>
       </header>
+
+      {/* Em andamento: compras abertas + listas ativas */}
+      {(open.length > 0 || activeLists.length > 0) && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold text-ink-muted">Em andamento</h2>
+
+          {open.map((p) => (
+            <Link
+              key={p.id}
+              href={`/compras/${p.id}`}
+              className="flex items-center gap-3 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 active:scale-[0.99]"
+            >
+              <Pencil className="h-5 w-5 shrink-0 text-accent" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">
+                  Compra de {formatLongDate(p.purchase_date)}
+                </p>
+                <p className="truncate text-xs text-ink-muted">
+                  {p.market?.name ?? "Sem mercado"} · {p.itemCount}{" "}
+                  {p.itemCount === 1 ? "item" : "itens"} · aberta
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="font-bold">{formatBRL(p.total)}</p>
+                <span className="text-xs text-accent">Continuar →</span>
+              </div>
+            </Link>
+          ))}
+
+          {activeLists.map((l) => (
+            <Link
+              key={l.id}
+              href={`/listas/${l.id}`}
+              className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3 active:scale-[0.99]"
+            >
+              <ListChecks className="h-5 w-5 shrink-0 text-ink-muted" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{l.title}</p>
+                <p className="truncate text-xs text-ink-muted">
+                  Lista · {l.checked}/{l.total} itens
+                  {l.market ? ` · ${l.market.name}` : ""}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs text-ink-muted">Abrir →</span>
+            </Link>
+          ))}
+        </section>
+      )}
 
       {/* Card do mês */}
       <div className="card">
@@ -158,13 +217,13 @@ export default async function DashboardPage() {
             Ver todas
           </Link>
         </div>
-        {recent.length === 0 ? (
+        {recentDone.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink-muted">
-            Nenhuma compra ainda.
+            Nenhuma compra concluída ainda.
           </p>
         ) : (
           <ul className="overflow-hidden rounded-2xl border border-line">
-            {recent.map((p) => (
+            {recentDone.map((p) => (
               <li key={p.id}>
                 <Link
                   href={`/compras/${p.id}`}

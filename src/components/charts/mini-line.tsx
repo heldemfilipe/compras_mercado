@@ -73,7 +73,7 @@ export default function MiniLine({
               y={y(v) + 3}
               textAnchor="end"
               fontSize="11"
-              fill="#71717a"
+              fill="#a1a1aa"
             >
               {`R$${v.toFixed(0)}`}
             </text>
@@ -98,7 +98,7 @@ export default function MiniLine({
           </circle>
         ))}
 
-        <text x={padL} y={H - 8} fontSize="11" fill="#71717a">
+        <text x={padL} y={H - 8} fontSize="11" fill="#a1a1aa">
           {formatMonthShort(points[0].date.slice(0, 7))}
         </text>
         <text
@@ -106,7 +106,7 @@ export default function MiniLine({
           y={H - 8}
           textAnchor="end"
           fontSize="11"
-          fill="#71717a"
+          fill="#a1a1aa"
         >
           {formatMonthShort(points[points.length - 1].date.slice(0, 7))}
         </text>

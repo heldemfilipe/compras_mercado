@@ -49,6 +49,7 @@ export interface PurchaseListRow {
 export async function getPurchasesWithTotals(
   supabase: DB,
   limit?: number,
+  status?: "aberta" | "concluida",
 ): Promise<PurchaseListRow[]> {
   let query = supabase
     .from("purchases")
@@ -57,6 +58,7 @@ export async function getPurchasesWithTotals(
     )
     .order("purchase_date", { ascending: false })
     .order("created_at", { ascending: false });
+  if (status) query = query.eq("status", status);
   if (limit) query = query.limit(limit);
 
   const { data, error } = await query;
