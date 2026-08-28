@@ -112,9 +112,11 @@ export default async function ListaDetailPage({
           </form>
         </details>
 
-        {estimated > 0 && (
+        {!locked && (
           <div className="mb-3 flex items-center justify-between rounded-xl bg-surface-2 px-4 py-2.5 text-sm">
-            <span className="text-ink-muted">Estimativa</span>
+            <span className="text-ink-muted">
+              Total {checkedCount < list.items.length ? "(parcial)" : ""}
+            </span>
             <span className="font-semibold">{formatBRL(estimated)}</span>
           </div>
         )}

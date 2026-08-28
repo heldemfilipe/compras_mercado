@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Check, Minus, Plus, Scale, Trash2, X } from "lucide-react";
 import { formatBRL, formatQty } from "@/lib/format";
-import { deleteListItem, toggleListItem, updateListItem } from "../actions";
+import {
+  deleteListItem,
+  setListItemField,
+  toggleListItem,
+  updateListItem,
+} from "../actions";
 
 type Cat = { id: string; name: string };
 type Item = {
@@ -30,10 +35,33 @@ export default function ListItemRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [weight, setWeight] = useState(item.is_weight);
+  const [editQty, setEditQty] = useState(item.quantity || 1);
+
+  // estado inline (linha compacta)
+  const priceForm = useRef<HTMLFormElement>(null);
+  const qtyForm = useRef<HTMLFormElement>(null);
+  const [price, setPrice] = useState(
+    item.unit_price == null ? "" : String(item.unit_price).replace(".", ","),
+  );
   const [qty, setQty] = useState(item.quantity || 1);
+  const [kg, setKg] = useState(formatQty(item.quantity));
 
-  const lineTotal = (item.unit_price ?? 0) * item.quantity;
+  const numFromStr = (s: string) => {
+    const n = Number(s.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const lineTotal = numFromStr(price) * (item.is_weight ? numFromStr(kg) : qty);
 
+  async function saveQty(next: number) {
+    setQty(next);
+    const fd = new FormData();
+    fd.set("id", item.id);
+    fd.set("list_id", listId);
+    fd.set("quantity", String(next));
+    await setListItemField(fd);
+  }
+
+  /* ------------------------------- EDIÇÃO ------------------------------- */
   if (editing) {
     return (
       <li className="border-b border-line bg-surface-2 p-3 last:border-b-0">
@@ -46,11 +74,7 @@ export default function ListItemRow({
         >
           <input type="hidden" name="id" value={item.id} />
           <input type="hidden" name="list_id" value={listId} />
-          <input
-            type="hidden"
-            name="is_weight"
-            value={weight ? "on" : ""}
-          />
+          <input type="hidden" name="is_weight" value={weight ? "on" : ""} />
 
           <input
             name="name"
@@ -75,7 +99,7 @@ export default function ListItemRow({
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  onClick={() => setEditQty((q) => Math.max(1, q - 1))}
                   className="btn-ghost h-10 w-10 !px-0"
                   aria-label="Diminuir"
                 >
@@ -84,13 +108,13 @@ export default function ListItemRow({
                 <input
                   name="quantity"
                   readOnly
-                  value={qty}
+                  value={editQty}
                   aria-label="Quantidade"
                   className="w-9 bg-transparent text-center text-[15px] font-semibold"
                 />
                 <button
                   type="button"
-                  onClick={() => setQty((q) => q + 1)}
+                  onClick={() => setEditQty((q) => q + 1)}
                   className="btn-ghost h-10 w-10 !px-0"
                   aria-label="Aumentar"
                 >
@@ -106,11 +130,7 @@ export default function ListItemRow({
               <input
                 name="unit_price"
                 inputMode="decimal"
-                defaultValue={
-                  item.unit_price == null
-                    ? ""
-                    : String(item.unit_price).replace(".", ",")
-                }
+                defaultValue={price}
                 placeholder="0,00"
                 aria-label="Valor unitário"
                 className="input w-full pl-9 text-right"
@@ -183,65 +203,142 @@ export default function ListItemRow({
     );
   }
 
+  /* --------------------------- LINHA COMPACTA --------------------------- */
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
     <li
-      onClick={() => !locked && setEditing(true)}
-      className={`flex items-center gap-3 border-b px-3 py-2.5 transition-colors last:border-b-0 ${
+      className={`border-b px-3 py-2.5 transition-colors last:border-b-0 ${
         item.checked
           ? "border-positive/20 bg-positive/15"
-          : "border-line bg-surface " + (locked ? "" : "active:bg-surface-2")
-      } ${locked ? "" : "cursor-pointer"}`}
+          : "border-line bg-surface"
+      }`}
     >
-      <form
-        action={toggleListItem}
-        className="flex"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <input type="hidden" name="id" value={item.id} />
-        <input type="hidden" name="list_id" value={listId} />
-        <input type="hidden" name="checked" value={String(item.checked)} />
-        <button
-          type="submit"
-          aria-label={item.checked ? "Desmarcar" : "Marcar como comprado"}
-          className={`flex h-7 w-7 items-center justify-center rounded-md border transition ${
-            item.checked
-              ? "border-positive bg-positive text-white"
-              : "border-line"
-          }`}
-        >
-          {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
-        </button>
-      </form>
+      <div className="flex items-center gap-2">
+        <form action={toggleListItem} className="flex" onClick={stop}>
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="list_id" value={listId} />
+          <input type="hidden" name="checked" value={String(item.checked)} />
+          <button
+            type="submit"
+            aria-label={item.checked ? "Desmarcar" : "Marcar como comprado"}
+            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition ${
+              item.checked
+                ? "border-positive bg-positive text-white"
+                : "border-line"
+            }`}
+          >
+            {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
+          </button>
+        </form>
 
-      <div className="min-w-0 flex-1">
-        <p
-          className={`truncate text-[15px] ${
-            item.checked
-              ? "text-ink-muted line-through"
-              : "font-medium"
-          }`}
+        <button
+          type="button"
+          onClick={() => !locked && setEditing(true)}
+          className="min-w-0 flex-1 text-left"
         >
-          {item.name}
-        </p>
-        <p className="truncate text-xs text-ink-faint">
-          {item.is_weight
-            ? `${formatQty(item.quantity)} kg`
-            : `${formatQty(item.quantity)}×`}
-          {item.unit_price != null && ` · ${formatBRL(item.unit_price)}`}
-          {item.note && ` · ${item.note}`}
-          {item.category && !item.checked && ` · ${item.category.name}`}
-        </p>
+          <p
+            className={`truncate text-[15px] ${
+              item.checked ? "text-ink-muted line-through" : "font-medium"
+            }`}
+          >
+            {item.name}
+          </p>
+        </button>
+
+        {!locked ? (
+          <form
+            ref={priceForm}
+            action={setListItemField}
+            onClick={stop}
+            className="flex items-center rounded-lg border border-line bg-surface-2 pl-2"
+          >
+            <input type="hidden" name="id" value={item.id} />
+            <input type="hidden" name="list_id" value={listId} />
+            <span className="text-xs text-ink-faint">R$</span>
+            <input
+              name="unit_price"
+              inputMode="decimal"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              onBlur={() => priceForm.current?.requestSubmit()}
+              placeholder="0,00"
+              aria-label={`Preço de ${item.name}`}
+              className="w-16 bg-transparent px-1 py-1.5 text-right text-[15px] outline-none"
+            />
+          </form>
+        ) : (
+          item.unit_price != null && (
+            <span className="text-sm text-ink-muted">
+              {formatBRL(item.unit_price)}
+            </span>
+          )
+        )}
       </div>
 
-      {item.unit_price != null && (
-        <span
-          className={`shrink-0 text-sm font-semibold ${
-            item.checked ? "text-ink-muted" : ""
-          }`}
-        >
-          {formatBRL(lineTotal)}
-        </span>
-      )}
+      {/* segunda linha: quantidade + categoria + total */}
+      <div className="mt-1 flex items-center gap-2 pl-9 text-xs text-ink-faint">
+        {!locked ? (
+          item.is_weight ? (
+            <form
+              ref={qtyForm}
+              action={setListItemField}
+              onClick={stop}
+              className="flex items-center gap-1"
+            >
+              <input type="hidden" name="id" value={item.id} />
+              <input type="hidden" name="list_id" value={listId} />
+              <input
+                name="quantity"
+                inputMode="decimal"
+                value={kg}
+                onChange={(e) => setKg(e.target.value)}
+                onBlur={() => qtyForm.current?.requestSubmit()}
+                aria-label="Peso em kg"
+                className="w-12 rounded border border-line bg-surface-2 px-1 py-0.5 text-center text-ink outline-none"
+              />
+              <span>kg</span>
+            </form>
+          ) : (
+            <div className="flex items-center gap-1" onClick={stop}>
+              <button
+                type="button"
+                onClick={() => saveQty(Math.max(1, qty - 1))}
+                className="flex h-6 w-6 items-center justify-center rounded border border-line text-ink-muted"
+                aria-label="Diminuir quantidade"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <span className="w-5 text-center font-semibold text-ink">
+                {qty}
+              </span>
+              <button
+                type="button"
+                onClick={() => saveQty(qty + 1)}
+                className="flex h-6 w-6 items-center justify-center rounded border border-line text-ink-muted"
+                aria-label="Aumentar quantidade"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          )
+        ) : (
+          <span>
+            {item.is_weight
+              ? `${formatQty(item.quantity)} kg`
+              : `${formatQty(item.quantity)}×`}
+          </span>
+        )}
+
+        {item.category && <span className="truncate">{item.category.name}</span>}
+        {item.note && <span className="truncate">· {item.note}</span>}
+
+        {lineTotal > 0 && (
+          <span className="ml-auto font-semibold text-ink-muted">
+            {formatBRL(lineTotal)}
+          </span>
+        )}
+      </div>
     </li>
   );
 }

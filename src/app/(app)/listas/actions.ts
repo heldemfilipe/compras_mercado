@@ -101,6 +101,8 @@ export async function addListItem(formData: FormData) {
   if (!list_id || !name) return;
   const category_id = String(formData.get("category_id") ?? "") || null;
   const quantity = num(formData.get("quantity"), 1) || 1;
+  const priceRaw = String(formData.get("unit_price") ?? "").trim();
+  const unit_price = priceRaw === "" ? null : num(formData.get("unit_price"), 0);
 
   const { supabase } = await db();
   const { data: last } = await supabase
@@ -116,8 +118,31 @@ export async function addListItem(formData: FormData) {
     name,
     category_id,
     quantity,
+    unit_price,
     sort_order: (last?.sort_order ?? 0) + 1,
   });
+  revalidatePath(`/listas/${list_id}`);
+  revalidatePath("/listas");
+}
+
+/** Ajuste rápido de preço e/ou quantidade direto na linha da lista. */
+export async function setListItemField(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const list_id = String(formData.get("list_id") ?? "");
+  if (!id) return;
+
+  const patch: Record<string, unknown> = {};
+  if (formData.has("unit_price")) {
+    const raw = String(formData.get("unit_price") ?? "").trim();
+    patch.unit_price = raw === "" ? null : num(formData.get("unit_price"), 0);
+  }
+  if (formData.has("quantity")) {
+    patch.quantity = num(formData.get("quantity"), 1) || 1;
+  }
+  if (Object.keys(patch).length === 0) return;
+
+  const { supabase } = await db();
+  await supabase.from("shopping_list_items").update(patch).eq("id", id);
   revalidatePath(`/listas/${list_id}`);
   revalidatePath("/listas");
 }

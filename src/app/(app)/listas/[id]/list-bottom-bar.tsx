@@ -35,6 +35,7 @@ export default function ListBottomBar({
           ref={ref}
           action={async (fd) => {
             await addListItem(fd);
+            ref.current?.reset();
             setName("");
             setQty(1);
             setCatId("");
@@ -56,6 +57,18 @@ export default function ListBottomBar({
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+            <div className="relative w-24 shrink-0">
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-faint">
+                R$
+              </span>
+              <input
+                name="unit_price"
+                inputMode="decimal"
+                placeholder="0,00"
+                aria-label="Valor (opcional)"
+                className="input w-full pl-8 pr-2 text-right"
+              />
+            </div>
             <button
               type="submit"
               className="btn shrink-0 !px-3"
