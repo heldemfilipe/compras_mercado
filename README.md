@@ -25,7 +25,7 @@ gastos entre meses e entre produtos.
 | **Categorias** | Automáticas pelo nome do produto (offline, sem IA) e sempre editáveis. Deixe em _"Automático"_ ou escolha na mão. |
 | **Listas** | Lista do mês com itens marcáveis, estimativa de gasto e botão **"Registrar compra"** que transforma a lista numa compra. |
 | **Modelos** | Modelos de lista reaproveitáveis (ex.: _"Compra do mês"_). Marque um como padrão e gere a lista do mês em 1 toque. |
-| **Gráficos** | Gasto por mês, comparação entre dois meses (inclusive por categoria), histórico de preço de um produto e gasto por categoria no período. |
+| **Gráficos** | Gasto por mês num gráfico onde você **toca nos meses para fixar e comparar** (total, vs média, por categoria), histórico de preço de um produto e gasto por categoria no período. |
 | **Ajustes** | Cadastro de mercados e categorias, nome de exibição e logout. |
 
 ---
@@ -58,8 +58,9 @@ No painel do Supabase: **SQL Editor → New query**. Rode um de cada vez, nesta 
 
 1. [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) — tabelas, RLS e funções.
 2. [`supabase/migrations/0002_categorias_automaticas.sql`](supabase/migrations/0002_categorias_automaticas.sql) — **categorização automática**: todo item sem categoria recebe uma sozinho, a partir de palavras no nome (ex.: _"detergente" → Limpeza_, _"linguiça" → Carnes_). Você pode escolher na mão a qualquer momento.
-3. (Opcional, recomendado) [`supabase/seed.sql`](supabase/seed.sql) — categorias, mercados de exemplo, o modelo _"Compra do mês"_ (baseado numa lista de caderno) e a lista do mês atual.
-4. (Opcional) [`supabase/examples/historico-assai.sql`](supabase/examples/historico-assai.sql) — um ano de compras de exemplo para os gráficos já nascerem com dados. Cada mês fecha no total exato.
+3. [`supabase/migrations/0003_sugestoes_produto.sql`](supabase/migrations/0003_sugestoes_produto.sql) — **autocomplete + comparação de preço** na tela de adicionar item (sugere produtos já comprados e mostra _"▲ 12% vs mês passado"_).
+4. (Opcional, recomendado) [`supabase/seed.sql`](supabase/seed.sql) — categorias, mercados de exemplo, o modelo _"Compra do mês"_ (baseado numa lista de caderno) e a lista do mês atual.
+5. (Opcional) [`supabase/examples/historico-assai.sql`](supabase/examples/historico-assai.sql) — um ano de compras de exemplo para os gráficos já nascerem com dados. Cada mês fecha no total exato.
 
 ### 4. Copie as chaves de API
 
@@ -140,16 +141,17 @@ Abra a URL da Vercel no navegador do celular → menu → **Adicionar à tela in
 
 1. **Ajustes** → cadastre seus mercados (Assaí, Feira, etc.). As categorias já
    vêm prontas e são atribuídas sozinhas.
-2. **Compras → +** → escolha o mercado e a data, depois lance os itens
-   (`produto`, `valor unitário`, `quantidade` ou marque **"Por peso"** para
-   preço por kg). A categoria aparece sozinha (✨) enquanto você digita — pode
-   trocar. Ou use **Compras → Importar** e cole a lista inteira de uma vez.
+2. **Compras → +** → escolha o mercado e a data, depois lance os itens.
+   Ao digitar o produto, ele **autocompleta** com o que você já comprou (e traz
+   a categoria); ao digitar o valor, mostra **se está mais caro ou mais barato
+   que da última vez**. A categoria também aparece sozinha (✨) para itens
+   novos. Ou use **Compras → Importar** e cole a lista inteira de uma vez.
 3. **Listas** → **"Gerar lista do mês"** a partir de um modelo. Marque os itens
    enquanto compra e, no fim, **"Registrar compra"** cria a compra
    automaticamente.
 4. **Modelos** → monte a lista fixa que você sempre compra e marque como padrão.
-5. **Gráficos** → compare meses, veja o preço de um produto ao longo do tempo e
-   o gasto por categoria.
+5. **Gráficos** → toque nos meses do gráfico para fixar e comparar, veja o
+   preço de um produto ao longo do tempo e o gasto por categoria.
 
 ---
 
@@ -178,6 +180,7 @@ src/lib/
 supabase/
 ├─ migrations/0001_init.sql          # esquema + RLS + funções
 ├─ migrations/0002_categorias_...sql # guess_category() + gatilhos
+├─ migrations/0003_sugestoes_...sql  # product_suggestions() (autocomplete/preço)
 ├─ seed.sql                          # categorias, mercados, modelo, lista do mês
 └─ examples/historico-assai.sql      # ~1 ano de compras de exemplo
 scripts/create-user.mjs      # cria usuários via service_role
@@ -208,9 +211,9 @@ Duas funções no banco fazem o trabalho pesado:
 ## 🛣️ Próximos passos (ideias)
 
 - Reordenar itens da lista (arrastar).
-- Autocompletar produtos a partir do histórico.
 - Metas de gasto por mês / categoria.
 - Exportar CSV.
+- Autocomplete/comparação de preço também na tela de importar e nas listas.
 - Isolamento de dados por usuário (multi-família).
 
 ## 📄 Licença

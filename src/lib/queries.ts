@@ -408,6 +408,47 @@ export async function getTemplate(
   };
 }
 
+export interface ProductSuggestion {
+  name: string;
+  category_id: string | null;
+  category_name: string | null;
+  category_color: string | null;
+  last_qty: number;
+  ref_price: number | null;
+  ref_date: string | null;
+  min_price: number | null;
+  max_price: number | null;
+  avg_price: number | null;
+  n_before: number;
+  times_total: number;
+}
+
+/** Produtos já comprados + preço da última vez (antes de `before`) para comparar. */
+export async function getProductSuggestions(
+  supabase: DB,
+  before: string,
+): Promise<ProductSuggestion[]> {
+  const { data, error } = await supabase.rpc("product_suggestions", {
+    p_before: before,
+  });
+  // Sem a migration 0003 a função não existe — degrada sem quebrar a tela.
+  if (error) return [];
+  return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    name: (r.name as string) ?? "",
+    category_id: (r.category_id ?? null) as string | null,
+    category_name: (r.category_name ?? null) as string | null,
+    category_color: (r.category_color ?? null) as string | null,
+    last_qty: Number(r.last_qty ?? 1) || 1,
+    ref_price: r.ref_price == null ? null : Number(r.ref_price),
+    ref_date: (r.ref_date ?? null) as string | null,
+    min_price: r.min_price == null ? null : Number(r.min_price),
+    max_price: r.max_price == null ? null : Number(r.max_price),
+    avg_price: r.avg_price == null ? null : Number(r.avg_price),
+    n_before: Number(r.n_before ?? 0),
+    times_total: Number(r.times_total ?? 0),
+  }));
+}
+
 export async function getProfileName(supabase: DB): Promise<string | null> {
   const {
     data: { user },

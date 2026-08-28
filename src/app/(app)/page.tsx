@@ -20,7 +20,7 @@ import {
   toMonthKey,
 } from "@/lib/format";
 import { colorFor } from "@/lib/colors";
-import MonthlyBarChart from "@/components/charts/monthly-bar-chart";
+import MonthlyBars from "@/components/charts/monthly-bars";
 import CategoryBars, { type CatDatum } from "@/components/charts/category-bars";
 
 export default async function DashboardPage() {
@@ -41,8 +41,11 @@ export default async function DashboardPage() {
   const prevMonth = monthly.find((m) => m.month === prevKey);
   const thisTotal = thisMonth?.total ?? 0;
   const prevTotal = prevMonth?.total ?? 0;
+  const hasThisMonth = (thisMonth?.purchases ?? 0) > 0;
   const delta =
-    prevTotal > 0 ? ((thisTotal - prevTotal) / prevTotal) * 100 : null;
+    hasThisMonth && prevTotal > 0
+      ? ((thisTotal - prevTotal) / prevTotal) * 100
+      : null;
 
   // top categorias do mês atual
   const catMap = new Map<string, CatDatum>();
@@ -87,12 +90,7 @@ export default async function DashboardPage() {
           {formatBRL(thisTotal)}
         </p>
         <div className="mt-2 flex items-center gap-3 text-sm">
-          {delta === null ? (
-            <span className="text-ink-muted">
-              {thisMonth?.purchases ?? 0}{" "}
-              {(thisMonth?.purchases ?? 0) === 1 ? "compra" : "compras"}
-            </span>
-          ) : (
+          {delta !== null ? (
             <span
               className={`flex items-center gap-1 ${
                 delta > 0 ? "text-negative" : "text-positive"
@@ -106,10 +104,19 @@ export default async function DashboardPage() {
               {delta > 0 ? "+" : ""}
               {delta.toFixed(0)}% vs {formatMonthLabel(prevKey)}
             </span>
+          ) : hasThisMonth ? (
+            <span className="text-ink-muted">
+              {thisMonth?.purchases}{" "}
+              {thisMonth?.purchases === 1 ? "compra" : "compras"} este mês
+            </span>
+          ) : (
+            <span className="text-ink-muted">
+              Sem compras ainda · mês passado {formatBRL(prevTotal)}
+            </span>
           )}
         </div>
         <div className="mt-4">
-          <MonthlyBarChart data={monthly} height={180} />
+          <MonthlyBars data={monthly} height={180} />
         </div>
         <Link
           href="/graficos"

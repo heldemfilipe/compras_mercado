@@ -1,102 +1,105 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Search } from "lucide-react";
-import type { FlatItem } from "@/lib/types";
+import Link from "next/link";
+import { Search, X } from "lucide-react";
+import type { FlatItem, MonthlyTotal } from "@/lib/types";
 import {
   formatBRL,
   formatLongDate,
   formatMonthLabel,
   formatMonthShort,
 } from "@/lib/format";
-import { colorFor, CHART_AXIS, CHART_GRID } from "@/lib/colors";
+import { colorFor } from "@/lib/colors";
+import MonthlyBars from "@/components/charts/monthly-bars";
+import MiniLine from "@/components/charts/mini-line";
 import CategoryBars, { type CatDatum } from "@/components/charts/category-bars";
 
 export default function GraficosClient({
   items,
-  months,
+  monthly,
 }: {
   items: FlatItem[];
-  months: string[]; // asc
+  monthly: MonthlyTotal[];
 }) {
-  const desc = [...months].reverse();
+  const monthsDesc = [...monthly].map((m) => m.month).reverse();
+  const avg =
+    monthly.length > 0
+      ? monthly.reduce((s, m) => s + m.total, 0) / monthly.length
+      : 0;
 
-  /* ------------------------- Comparar meses ------------------------- */
-  const [monthA, setMonthA] = useState(desc[0] ?? "");
-  const [monthB, setMonthB] = useState(desc[1] ?? desc[0] ?? "");
+  /* ---------------- meses fixados no gráfico ---------------- */
+  const [pinned, setPinned] = useState<string[]>([]);
+  const togglePin = (m: string) =>
+    setPinned((p) => (p.includes(m) ? p.filter((x) => x !== m) : [...p, m]));
 
-  const compare = useMemo(() => {
-    const build = (m: string) => {
-      const rows = items.filter((i) => i.month === m);
-      const total = rows.reduce((s, i) => s + i.total, 0);
-      const byCat = new Map<string, number>();
-      for (const i of rows) {
-        const k = i.category ?? "Sem categoria";
-        byCat.set(k, (byCat.get(k) ?? 0) + i.total);
+  const catsForMonth = (m: string): CatDatum[] => {
+    const map = new Map<string, CatDatum>();
+    for (const it of items) {
+      if (it.month !== m) continue;
+      const k = it.category ?? "Sem categoria";
+      const e =
+        map.get(k) ??
+        ({ name: k, value: 0, color: it.category_color ?? colorFor(k) } as CatDatum);
+      e.value += it.total;
+      map.set(k, e);
+    }
+    return [...map.values()].sort((a, b) => b.value - a.value);
+  };
+
+  const pinnedSorted = [...pinned].sort();
+  const compareCats = useMemo(() => {
+    if (pinnedSorted.length < 2) return [];
+    const names = new Set<string>();
+    const perMonth: Record<string, Map<string, number>> = {};
+    for (const m of pinnedSorted) {
+      perMonth[m] = new Map();
+      for (const it of items) {
+        if (it.month !== m) continue;
+        const k = it.category ?? "Sem categoria";
+        names.add(k);
+        perMonth[m].set(k, (perMonth[m].get(k) ?? 0) + it.total);
       }
-      return { total, byCat, count: rows.length };
-    };
-    const a = build(monthA);
-    const b = build(monthB);
-    const cats = new Set([...a.byCat.keys(), ...b.byCat.keys()]);
-    const catRows = [...cats]
+    }
+    return [...names]
       .map((name) => ({
         name,
-        a: a.byCat.get(name) ?? 0,
-        b: b.byCat.get(name) ?? 0,
+        color: colorFor(name),
+        vals: pinnedSorted.map((m) => perMonth[m].get(name) ?? 0),
       }))
-      .sort((x, y) => y.a + y.b - (x.a + x.b));
-    return { a, b, catRows };
-  }, [items, monthA, monthB]);
+      .sort((a, b) => b.vals.reduce((s, v) => s + v, 0) - a.vals.reduce((s, v) => s + v, 0));
+  }, [pinnedSorted, items]);
 
-  const deltaPct =
-    compare.b.total > 0
-      ? ((compare.a.total - compare.b.total) / compare.b.total) * 100
-      : null;
-
-  /* --------------------- Produto ao longo do tempo --------------------- */
+  /* ---------------- produto ao longo do tempo ---------------- */
   const [query, setQuery] = useState("");
   const product = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q.length < 2) return null;
     const rows = items
-      .filter((i) => i.name.toLowerCase().includes(q))
+      .filter((i) => i.name.toLowerCase().includes(q) && i.unit_price > 0)
       .slice()
-      .sort((x, y) => x.date.localeCompare(y.date));
-    if (rows.length === 0) return { rows, prices: [], stats: null };
-    const prices = rows.map((r) => ({
-      date: r.date,
-      preco: r.unit_price,
-      label: r.name,
-      market: r.market,
-    }));
-    const values = rows.map((r) => r.unit_price).filter((v) => v > 0);
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (rows.length === 0) return { rows, points: [], stats: null };
+    const points = rows.map((r) => ({ date: r.date, price: r.unit_price }));
+    const values = rows.map((r) => r.unit_price);
     const spent = rows.reduce((s, r) => s + r.total, 0);
-    const stats = {
-      count: rows.length,
-      avg: values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0,
-      min: values.length ? Math.min(...values) : 0,
-      max: values.length ? Math.max(...values) : 0,
-      spent,
-      first: rows[0].date,
-      last: rows[rows.length - 1].date,
+    return {
+      rows,
+      points,
+      stats: {
+        count: rows.length,
+        avg: values.reduce((s, v) => s + v, 0) / values.length,
+        min: Math.min(...values),
+        max: Math.max(...values),
+        spent,
+      },
     };
-    return { rows, prices, stats };
   }, [items, query]);
 
-  /* ----------------------- Categorias no período ----------------------- */
+  /* ---------------- categorias no período ---------------- */
   const [range, setRange] = useState(6);
   const catPeriod = useMemo(() => {
-    const cutoff = desc[range - 1] ?? desc[desc.length - 1] ?? "";
+    const cutoff = monthsDesc[range - 1] ?? monthsDesc[monthsDesc.length - 1] ?? "";
     const map = new Map<string, CatDatum>();
     for (const i of items) {
       if (cutoff && i.month < cutoff) continue;
@@ -108,104 +111,137 @@ export default function GraficosClient({
       map.set(k, e);
     }
     return [...map.values()].sort((a, b) => b.value - a.value);
-  }, [items, range, desc]);
+  }, [items, range, monthsDesc]);
+
+  const single = pinnedSorted.length === 1 ? pinnedSorted[0] : null;
+  const singleIdx = single ? monthly.findIndex((m) => m.month === single) : -1;
+  const singleRow = singleIdx >= 0 ? monthly[singleIdx] : null;
+  const singlePrev = singleIdx > 0 ? monthly[singleIdx - 1] : null;
 
   return (
     <div className="space-y-6">
-      {/* Comparar meses */}
+      {/* Gastos por mês (clicável) */}
       <section className="card">
-        <h2 className="text-sm font-semibold text-ink-muted">
-          Comparar dois meses
-        </h2>
-        <div className="mt-3 flex gap-2">
-          <select
-            value={monthA}
-            onChange={(e) => setMonthA(e.target.value)}
-            className="input flex-1"
-          >
-            {desc.map((m) => (
-              <option key={m} value={m}>
-                {formatMonthLabel(m)}
-              </option>
-            ))}
-          </select>
-          <span className="self-center text-ink-faint">vs</span>
-          <select
-            value={monthB}
-            onChange={(e) => setMonthB(e.target.value)}
-            className="input flex-1"
-          >
-            {desc.map((m) => (
-              <option key={m} value={m}>
-                {formatMonthLabel(m)}
-              </option>
-            ))}
-          </select>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-ink-muted">Gastos por mês</h2>
+          <span className="text-xs text-ink-faint">média {formatBRL(avg)}</span>
+        </div>
+        <div className="mt-3">
+          <MonthlyBars
+            data={monthly}
+            height={230}
+            selected={pinned}
+            onToggle={togglePin}
+          />
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 text-center">
-          <div className="rounded-xl bg-surface-2 p-3">
-            <p className="text-xs text-ink-muted">
-              {formatMonthLabel(monthA)}
-            </p>
-            <p className="mt-1 text-lg font-bold">{formatBRL(compare.a.total)}</p>
-            <p className="text-xs text-ink-faint">{compare.a.count} itens</p>
+        {pinned.length > 0 && (
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-xs text-ink-muted">
+              {pinnedSorted.map((m) => formatMonthLabel(m)).join(" · ")}
+            </span>
+            <button
+              onClick={() => setPinned([])}
+              className="flex items-center gap-1 text-xs text-accent"
+            >
+              <X className="h-3 w-3" /> limpar
+            </button>
           </div>
-          <div className="rounded-xl bg-surface-2 p-3">
-            <p className="text-xs text-ink-muted">
-              {formatMonthLabel(monthB)}
-            </p>
-            <p className="mt-1 text-lg font-bold">{formatBRL(compare.b.total)}</p>
-            <p className="text-xs text-ink-faint">{compare.b.count} itens</p>
-          </div>
-        </div>
-
-        {deltaPct !== null && (
-          <p
-            className={`mt-2 text-center text-sm font-medium ${
-              compare.a.total > compare.b.total
-                ? "text-negative"
-                : "text-positive"
-            }`}
-          >
-            {compare.a.total > compare.b.total ? "+" : ""}
-            {deltaPct.toFixed(0)}% ({formatBRL(compare.a.total - compare.b.total)})
-          </p>
         )}
 
-        {compare.catRows.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <div className="flex justify-between text-xs text-ink-faint">
-              <span>Categoria</span>
-              <span className="flex gap-4">
-                <span className="w-16 text-right">
-                  {formatMonthShort(monthA)}
-                </span>
-                <span className="w-16 text-right">
-                  {formatMonthShort(monthB)}
-                </span>
-              </span>
-            </div>
-            {compare.catRows.map((r) => (
-              <div
-                key={r.name}
-                className="flex items-center justify-between border-t border-line pt-2 text-sm"
-              >
-                <span className="flex items-center gap-2">
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ background: colorFor(r.name) }}
-                  />
-                  {r.name}
-                </span>
-                <span className="flex gap-4 tabular-nums">
-                  <span className="w-16 text-right">{formatBRL(r.a)}</span>
-                  <span className="w-16 text-right text-ink-muted">
-                    {formatBRL(r.b)}
-                  </span>
-                </span>
+        {/* 1 mês fixado -> detalhe */}
+        {single && singleRow && (
+          <div className="mt-3 space-y-3 border-t border-line pt-3">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-sm capitalize text-ink-muted">
+                  {formatMonthLabel(single)}
+                </p>
+                <p className="text-2xl font-bold">{formatBRL(singleRow.total)}</p>
               </div>
-            ))}
+              <div className="text-right text-xs">
+                <p
+                  className={
+                    singleRow.total > avg ? "text-negative" : "text-positive"
+                  }
+                >
+                  {singleRow.total > avg ? "+" : ""}
+                  {(((singleRow.total - avg) / avg) * 100).toFixed(0)}% vs média
+                </p>
+                {singlePrev && (
+                  <p className="text-ink-faint">
+                    {singleRow.total > singlePrev.total ? "+" : ""}
+                    {(
+                      ((singleRow.total - singlePrev.total) /
+                        (singlePrev.total || 1)) *
+                      100
+                    ).toFixed(0)}
+                    % vs {formatMonthShort(singlePrev.month)}
+                  </p>
+                )}
+                <p className="text-ink-faint">
+                  {singleRow.purchases}{" "}
+                  {singleRow.purchases === 1 ? "compra" : "compras"} ·{" "}
+                  {singleRow.items} itens
+                </p>
+              </div>
+            </div>
+            <CategoryBars data={catsForMonth(single)} />
+          </div>
+        )}
+
+        {/* 2+ meses -> comparação */}
+        {pinnedSorted.length >= 2 && (
+          <div className="mt-3 overflow-x-auto border-t border-line pt-3">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-ink-faint">
+                  <th className="pb-2 text-left font-medium">Categoria</th>
+                  {pinnedSorted.map((m) => (
+                    <th
+                      key={m}
+                      className="pb-2 text-right font-medium capitalize"
+                    >
+                      {formatMonthShort(m)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-line font-semibold">
+                  <td className="py-2">Total</td>
+                  {pinnedSorted.map((m) => {
+                    const r = monthly.find((x) => x.month === m);
+                    return (
+                      <td key={m} className="py-2 text-right tabular-nums">
+                        {formatBRL(r?.total ?? 0)}
+                      </td>
+                    );
+                  })}
+                </tr>
+                {compareCats.map((c) => (
+                  <tr key={c.name} className="border-t border-line">
+                    <td className="py-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ background: c.color }}
+                        />
+                        {c.name}
+                      </span>
+                    </td>
+                    {c.vals.map((v, i) => (
+                      <td
+                        key={i}
+                        className="py-1.5 text-right tabular-nums text-ink-muted"
+                      >
+                        {v > 0 ? formatBRL(v) : "—"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
@@ -220,7 +256,7 @@ export default function GraficosClient({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ex.: café, sabão, refri…"
+            placeholder="Ex.: café, sabão, leite…"
             className="w-full bg-transparent py-2.5 text-[15px] outline-none placeholder:text-ink-faint"
           />
         </div>
@@ -235,65 +271,16 @@ export default function GraficosClient({
           </p>
         ) : (
           <>
-            <div className="mt-4" style={{ height: 200 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={product.prices}
-                  margin={{ top: 8, right: 8, bottom: 0, left: -12 }}
-                >
-                  <CartesianGrid stroke={CHART_GRID} vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(d: string) =>
-                      formatMonthShort(d.slice(0, 7))
-                    }
-                    tick={{ fill: CHART_AXIS, fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fill: CHART_AXIS, fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={44}
-                    tickFormatter={(v: number) => `R$${v.toFixed(0)}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#1b1b20",
-                      border: "1px solid #26262c",
-                      borderRadius: 12,
-                      fontSize: 13,
-                    }}
-                    labelStyle={{ color: "#a1a1aa" }}
-                    formatter={(v: number) => [formatBRL(v), "Preço unitário"]}
-                    labelFormatter={(d: string) => formatLongDate(d)}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="preco"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: "#3b82f6" }}
-                    activeDot={{ r: 5 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="mt-4">
+              <MiniLine points={product.points} />
             </div>
-
             {product.stats && (
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
                 <Stat label="Preço médio" value={formatBRL(product.stats.avg)} />
                 <Stat label="Menor" value={formatBRL(product.stats.min)} />
                 <Stat label="Maior" value={formatBRL(product.stats.max)} />
-                <Stat
-                  label="Compras"
-                  value={String(product.stats.count)}
-                />
-                <Stat
-                  label="Total gasto"
-                  value={formatBRL(product.stats.spent)}
-                />
+                <Stat label="Compras" value={String(product.stats.count)} />
+                <Stat label="Total gasto" value={formatBRL(product.stats.spent)} />
                 <Stat
                   label="Variação"
                   value={
@@ -308,6 +295,11 @@ export default function GraficosClient({
                 />
               </div>
             )}
+            <p className="mt-2 text-center text-xs text-ink-faint">
+              {product.rows.length} lançamento(s) ·{" "}
+              {formatLongDate(product.rows[0].date)} →{" "}
+              {formatLongDate(product.rows[product.rows.length - 1].date)}
+            </p>
           </>
         )}
       </section>
@@ -332,6 +324,37 @@ export default function GraficosClient({
         <div className="mt-3">
           <CategoryBars data={catPeriod} />
         </div>
+      </section>
+
+      {/* Lista de meses */}
+      <section className="card">
+        <h2 className="mb-2 text-sm font-semibold text-ink-muted">
+          Todos os meses
+        </h2>
+        <ul className="divide-y divide-line text-sm">
+          {[...monthly].reverse().map((m) => {
+            const isSel = pinned.includes(m.month);
+            return (
+              <li key={m.month}>
+                <button
+                  onClick={() => togglePin(m.month)}
+                  className="flex w-full items-center justify-between py-2 text-left"
+                >
+                  <span
+                    className={`capitalize ${
+                      isSel ? "font-semibold text-accent" : "text-ink-muted"
+                    }`}
+                  >
+                    {formatMonthLabel(m.month)}
+                  </span>
+                  <span className="font-medium tabular-nums">
+                    {formatBRL(m.total)}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </section>
     </div>
   );

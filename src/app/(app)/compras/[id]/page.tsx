@@ -3,7 +3,12 @@ import { notFound } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import PageHeader from "@/components/page-header";
 import { createClient } from "@/lib/supabase/server";
-import { getCategories, getMarkets, getPurchase } from "@/lib/queries";
+import {
+  getCategories,
+  getMarkets,
+  getProductSuggestions,
+  getPurchase,
+} from "@/lib/queries";
 import { formatBRL, formatLongDate } from "@/lib/format";
 import AddItemForm from "./add-item-form";
 import ItemRow from "./item-row";
@@ -27,6 +32,11 @@ export default async function CompraDetailPage({
   ]);
 
   if (!purchase) notFound();
+
+  const products = await getProductSuggestions(
+    supabase,
+    purchase.purchase_date.slice(0, 10),
+  );
 
   return (
     <>
@@ -129,7 +139,11 @@ export default async function CompraDetailPage({
 
       <div className="fixed inset-x-0 bottom-0 z-50">
         <div className="mx-auto w-full max-w-md">
-          <AddItemForm purchaseId={purchase.id} categories={categories} />
+          <AddItemForm
+            purchaseId={purchase.id}
+            categories={categories}
+            products={products}
+          />
         </div>
       </div>
     </>
