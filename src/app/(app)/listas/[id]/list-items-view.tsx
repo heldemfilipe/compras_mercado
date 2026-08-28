@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ListItemRow from "./list-item-row";
 
-type Cat = { id: string; name: string };
 type Item = {
   id: string;
   name: string;
@@ -28,12 +27,10 @@ const MODES: { id: Mode; label: string }[] = [
 export default function ListItemsView({
   items,
   listId,
-  categories,
   locked,
 }: {
   items: Item[];
   listId: string;
-  categories: Cat[];
   locked: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("cat");
@@ -143,7 +140,6 @@ export default function ListItemsView({
                     key={it.id}
                     item={it}
                     listId={listId}
-                    categories={categories}
                     locked={locked}
                   />
                 ))}

@@ -1,17 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, Minus, Plus, Trash2, X } from "lucide-react";
+import { Check, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { formatBRL, formatAmount, displayAmount, type Unit } from "@/lib/format";
 import UnitPicker, { convertAmount } from "@/components/unit-picker";
 import {
   deleteListItem,
+  renameListItem,
   setListItemField,
   toggleListItem,
-  updateListItem,
 } from "../actions";
 
-type Cat = { id: string; name: string };
 type Item = {
   id: string;
   name: string;
@@ -32,21 +31,14 @@ const toNum = (s: string) => {
 export default function ListItemRow({
   item,
   listId,
-  categories,
   locked,
 }: {
   item: Item;
   listId: string;
-  categories: Cat[];
   locked: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [editUnit, setEditUnit] = useState<Unit>(item.unit);
-  const [editAmount, setEditAmount] = useState(
-    String(displayAmount(item.quantity, item.unit)),
-  );
+  const [renaming, setRenaming] = useState(false);
 
-  // linha compacta
   const priceForm = useRef<HTMLFormElement>(null);
   const [price, setPrice] = useState(
     item.unit_price == null ? "" : String(item.unit_price).replace(".", ","),
@@ -71,119 +63,53 @@ export default function ListItemRow({
     await setListItemField(fd);
   }
 
-  /* ------------------------------- EDIÇÃO ------------------------------- */
-  if (editing) {
+  async function toggleChecked() {
+    const fd = new FormData();
+    fd.set("id", item.id);
+    fd.set("list_id", listId);
+    fd.set("checked", String(item.checked));
+    await toggleListItem(fd);
+  }
+
+  /* ------------------------------ RENOMEAR ----------------------------- */
+  if (renaming) {
     return (
       <li className="border-b border-line bg-surface-2 p-3 last:border-b-0">
         <form
           action={async (fd) => {
-            await updateListItem(fd);
-            setEditing(false);
+            await renameListItem(fd);
+            setRenaming(false);
           }}
-          className="space-y-2"
+          className="flex items-center gap-2"
         >
           <input type="hidden" name="id" value={item.id} />
           <input type="hidden" name="list_id" value={listId} />
-          <input type="hidden" name="unit" value={editUnit} />
-
           <input
             name="name"
             defaultValue={item.name}
             required
             autoFocus
-            className="input"
-            placeholder="Produto"
+            className="input flex-1"
+            placeholder="Nome do produto"
           />
-
-          <div className="flex items-center gap-2">
-            {editUnit === "un" ? (
-              <input
-                name="quantity"
-                inputMode="numeric"
-                value={editAmount}
-                onChange={(e) => setEditAmount(e.target.value)}
-                aria-label="Quantidade"
-                className="input w-16 text-center"
-              />
-            ) : (
-              <input
-                name="quantity"
-                inputMode="decimal"
-                value={editAmount}
-                onChange={(e) => setEditAmount(e.target.value)}
-                placeholder={editUnit}
-                aria-label={`Quantidade em ${editUnit}`}
-                className="input w-16 text-center"
-              />
-            )}
-
-            <UnitPicker
-              value={editUnit}
-              onChange={(u) => {
-                setEditAmount(String(convertAmount(toNum(editAmount), editUnit, u)));
-                setEditUnit(u);
-              }}
-            />
-
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-ink-faint">
-                R$
-              </span>
-              <input
-                name="unit_price"
-                inputMode="decimal"
-                defaultValue={price}
-                placeholder="0,00"
-                aria-label={editUnit === "un" ? "Valor unitário" : "Valor por kg"}
-                className="input w-full pl-9 text-right"
-              />
-            </div>
-          </div>
-
-          {categories.length > 0 && (
-            <select
-              name="category_id"
-              defaultValue={item.category?.id ?? ""}
-              className="input"
-            >
-              <option value="">Categoria: automática</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <input
-            name="note"
-            defaultValue={item.note ?? ""}
-            placeholder="Observação (marca, tamanho…)"
-            className="input"
-          />
-
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              className="btn-ghost btn-sm flex-1"
-            >
-              <X className="h-3.5 w-3.5" /> Cancelar
-            </button>
-            <button type="submit" className="btn btn-sm flex-1">
-              Salvar
-            </button>
-          </div>
+          <button type="submit" className="btn !px-3" aria-label="Salvar nome">
+            <Check className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setRenaming(false)}
+            className="btn-ghost !px-3"
+            aria-label="Cancelar"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </form>
 
-        <form
-          action={deleteListItem}
-          className="mt-2 border-t border-line pt-2 text-center"
-        >
+        <form action={deleteListItem} className="mt-2 text-center">
           <input type="hidden" name="id" value={item.id} />
           <input type="hidden" name="list_id" value={listId} />
-          <button className="text-sm text-negative">
-            <Trash2 className="mr-1 inline h-3.5 w-3.5" />
+          <button className="text-xs text-negative">
+            <Trash2 className="mr-1 inline h-3 w-3" />
             Remover da lista
           </button>
         </form>
@@ -191,48 +117,50 @@ export default function ListItemRow({
     );
   }
 
-  /* --------------------------- LINHA COMPACTA --------------------------- */
+  /* --------------------------- LINHA COMPACTA -------------------------- */
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
     <li
+      onClick={() => !locked && toggleChecked()}
       className={`border-b px-3 py-2.5 transition-colors last:border-b-0 ${
         item.checked
           ? "border-positive/20 bg-positive/15"
           : "border-line bg-surface"
-      }`}
+      } ${locked ? "" : "cursor-pointer active:bg-surface-2"}`}
     >
       <div className="flex items-center gap-2">
-        <form action={toggleListItem} className="flex" onClick={stop}>
-          <input type="hidden" name="id" value={item.id} />
-          <input type="hidden" name="list_id" value={listId} />
-          <input type="hidden" name="checked" value={String(item.checked)} />
-          <button
-            type="submit"
-            aria-label={item.checked ? "Desmarcar" : "Marcar como comprado"}
-            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition ${
-              item.checked
-                ? "border-positive bg-positive text-white"
-                : "border-line"
-            }`}
-          >
-            {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
-          </button>
-        </form>
-
-        <button
-          type="button"
-          onClick={() => !locked && setEditing(true)}
-          className="min-w-0 flex-1 text-left"
+        <span
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition ${
+            item.checked
+              ? "border-positive bg-positive text-white"
+              : "border-line"
+          }`}
         >
-          <p
-            className={`truncate text-[15px] ${
-              item.checked ? "text-ink-muted line-through" : "font-medium"
-            }`}
+          {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
+        </span>
+
+        <p
+          className={`min-w-0 flex-1 truncate text-[15px] ${
+            item.checked ? "text-ink-muted line-through" : "font-medium"
+          }`}
+        >
+          {item.name}
+        </p>
+
+        {!locked && (
+          <button
+            type="button"
+            onClick={(e) => {
+              stop(e);
+              setRenaming(true);
+            }}
+            className="shrink-0 rounded-lg p-1.5 text-ink-faint hover:text-ink"
+            aria-label="Renomear"
           >
-            {item.name}
-          </p>
-        </button>
+            <Pencil className="h-4 w-4" />
+          </button>
+        )}
 
         {!locked ? (
           <form
@@ -264,7 +192,7 @@ export default function ListItemRow({
         )}
       </div>
 
-      {/* segunda linha: quantidade + unidade + total */}
+      {/* linha 2: quantidade + unidade + total */}
       <div className="mt-1 flex items-center gap-2 pl-9 text-xs text-ink-faint">
         {!locked ? (
           <>

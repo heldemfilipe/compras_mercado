@@ -165,6 +165,17 @@ export async function setListItemField(formData: FormData) {
   revalidatePath("/listas");
 }
 
+export async function renameListItem(formData: FormData) {
+  const id = String(formData.get("id") ?? "");
+  const list_id = String(formData.get("list_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+  const { supabase } = await db();
+  await supabase.from("shopping_list_items").update({ name }).eq("id", id);
+  revalidatePath(`/listas/${list_id}`);
+  revalidatePath("/listas");
+}
+
 export async function toggleListItem(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const list_id = String(formData.get("list_id") ?? "");

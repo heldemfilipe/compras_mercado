@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import PageHeader from "@/components/page-header";
 import { createClient } from "@/lib/supabase/server";
-import { getCategories, getMarkets, getShoppingList } from "@/lib/queries";
+import { getMarkets, getShoppingList } from "@/lib/queries";
 import { formatBRL, formatMonthLabel, toMonthKey } from "@/lib/format";
 import ListItemsView from "./list-items-view";
 import ListBottomBar from "./list-bottom-bar";
@@ -22,9 +22,8 @@ export default async function ListaDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [list, categories, markets] = await Promise.all([
+  const [list, markets] = await Promise.all([
     getShoppingList(supabase, id),
-    getCategories(supabase),
     getMarkets(supabase, { includeArchived: true }),
   ]);
 
@@ -125,7 +124,6 @@ export default async function ListaDetailPage({
         <ListItemsView
           items={list.items}
           listId={list.id}
-          categories={categories}
           locked={locked}
         />
       </div>
