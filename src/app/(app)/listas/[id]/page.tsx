@@ -6,7 +6,7 @@ import PageHeader from "@/components/page-header";
 import { createClient } from "@/lib/supabase/server";
 import { getCategories, getMarkets, getShoppingList } from "@/lib/queries";
 import { formatBRL, formatMonthLabel, toMonthKey } from "@/lib/format";
-import ListItemRow from "./list-item-row";
+import ListItemsView from "./list-items-view";
 import ListBottomBar from "./list-bottom-bar";
 import ListActions from "./list-actions";
 import { updateListMeta } from "../actions";
@@ -119,23 +119,12 @@ export default async function ListaDetailPage({
           </div>
         )}
 
-        {list.items.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm text-ink-muted">
-            Lista vazia. Adicione itens pela barra abaixo.
-          </p>
-        ) : (
-          <ul className="overflow-hidden rounded-2xl border border-line">
-            {list.items.map((it) => (
-              <ListItemRow
-                key={it.id}
-                item={it}
-                listId={list.id}
-                categories={categories}
-                locked={locked}
-              />
-            ))}
-          </ul>
-        )}
+        <ListItemsView
+          items={list.items}
+          listId={list.id}
+          categories={categories}
+          locked={locked}
+        />
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-50">
