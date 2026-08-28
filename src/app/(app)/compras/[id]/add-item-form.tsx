@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, Sparkles } from "lucide-react";
+import { guessCategoryName } from "@/lib/categorize";
 import { addItem } from "../actions";
 
 type Cat = { id: string; name: string };
@@ -17,6 +18,11 @@ export default function AddItemForm({
   const [isWeight, setIsWeight] = useState(false);
   const [qty, setQty] = useState(1);
   const [pending, setPending] = useState(false);
+  const [name, setName] = useState("");
+  const [catId, setCatId] = useState("");
+
+  const guess = catId === "" ? guessCategoryName(name) : null;
+  const hasCat = categories.some((c) => c.name === guess);
 
   return (
     <form
@@ -26,6 +32,8 @@ export default function AddItemForm({
         try {
           await addItem(fd);
           ref.current?.reset();
+          setName("");
+          setCatId("");
           setQty(1);
           setIsWeight(false);
           ref.current?.querySelector<HTMLInputElement>('[name="name"]')?.focus();
@@ -44,6 +52,8 @@ export default function AddItemForm({
           autoComplete="off"
           placeholder="Produto (ex.: arroz, refri…)"
           className="input flex-1"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
         <input
           name="unit_price"
@@ -53,10 +63,24 @@ export default function AddItemForm({
         />
       </div>
 
+      {guess && (
+        <p className="mt-1 flex items-center gap-1 px-1 text-xs text-ink-faint">
+          <Sparkles className="h-3 w-3" />
+          Categoria automática:{" "}
+          <span className="text-ink-muted">{guess}</span>
+          {!hasCat && " (será criada)"}
+        </p>
+      )}
+
       <div className="mt-2 flex items-center gap-2">
         {categories.length > 0 && (
-          <select name="category_id" className="input flex-1" defaultValue="">
-            <option value="">Sem categoria</option>
+          <select
+            name="category_id"
+            className="input flex-1"
+            value={catId}
+            onChange={(e) => setCatId(e.target.value)}
+          >
+            <option value="">Automático (pela descrição)</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

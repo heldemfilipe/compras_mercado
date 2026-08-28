@@ -77,7 +77,7 @@ export default function ListItemRow({
                 defaultValue={item.category?.id ?? ""}
                 className="input flex-1"
               >
-                <option value="">Sem categoria</option>
+                <option value="">Automático (pela descrição)</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}

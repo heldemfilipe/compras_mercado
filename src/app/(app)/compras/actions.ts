@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { parseImportText } from "@/lib/import-parse";
 
 async function db() {
   const supabase = await createClient();
@@ -129,4 +130,36 @@ export async function deleteItem(formData: FormData) {
   revalidatePath(`/compras/${purchase_id}`);
   revalidatePath("/compras");
   revalidatePath("/");
+}
+
+export async function importPurchase(formData: FormData) {
+  const market_id = String(formData.get("market_id") ?? "") || null;
+  const purchase_date =
+    String(formData.get("purchase_date") ?? "") ||
+    new Date().toISOString().slice(0, 10);
+  const note = String(formData.get("note") ?? "").trim() || "Importada (colada)";
+  const items = parseImportText(String(formData.get("text") ?? ""));
+  if (items.length === 0) return;
+
+  const { supabase } = await db();
+  const { data, error } = await supabase
+    .from("purchases")
+    .insert({ market_id, purchase_date, note, status: "concluida" })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  const { error: itemsError } = await supabase.from("purchase_items").insert(
+    items.map((it) => ({
+      purchase_id: data.id,
+      name: it.name.slice(0, 120),
+      quantity: it.qty || 1,
+      unit_price: it.price || 0,
+    })),
+  );
+  if (itemsError) throw itemsError;
+
+  revalidatePath("/compras");
+  revalidatePath("/");
+  redirect(`/compras/${data.id}`);
 }

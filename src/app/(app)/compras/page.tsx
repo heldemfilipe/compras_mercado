@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ClipboardPaste, ShoppingCart } from "lucide-react";
 import PageHeader from "@/components/page-header";
 import EmptyState from "@/components/empty-state";
 import Fab from "@/components/fab";
@@ -23,7 +23,18 @@ export default async function ComprasPage() {
 
   return (
     <>
-      <PageHeader title="Compras" />
+      <PageHeader
+        title="Compras"
+        action={
+          <Link
+            href="/compras/importar"
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-ink-muted hover:text-ink"
+          >
+            <ClipboardPaste className="h-4 w-4" />
+            Importar
+          </Link>
+        }
+      />
 
       <div className="p-4">
         {purchases.length === 0 ? (

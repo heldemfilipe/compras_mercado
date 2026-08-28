@@ -49,7 +49,7 @@ export default function ListBottomBar({
               aria-label="Categoria"
               className="input w-28"
             >
-              <option value="">—</option>
+              <option value="">Automático</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
