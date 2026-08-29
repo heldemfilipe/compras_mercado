@@ -11,8 +11,10 @@ function fmt(cents: number): string {
 
 /**
  * Campo de valor em reais no estilo "caixa registradora":
- * sempre mostra `0,00`, e os dígitos entram da direita para a esquerda
- * (1 -> 0,01 -> 0,12 -> 1,25). Backspace remove da direita.
+ * fica EM BRANCO quando não há valor (placeholder mostra `0,00` só como
+ * dica). Ao digitar, os dígitos entram da direita para a esquerda,
+ * começando nos centavos (1 -> 0,01 -> 0,12 -> 1,25). Backspace remove
+ * da direita; ao chegar em zero volta a ficar em branco.
  *
  * Controlado por `value` em reais. Renderiza um input escondido `name`
  * com o número puro (ou "" quando zero) para enviar em formulários.
@@ -66,7 +68,7 @@ export default function MoneyInput({
         id={id}
         type="text"
         inputMode="numeric"
-        value={fmt(cents)}
+        value={cents > 0 ? fmt(cents) : ""}
         onChange={handleChange}
         onBlur={onBlur}
         placeholder={placeholder}

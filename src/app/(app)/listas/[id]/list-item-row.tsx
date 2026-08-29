@@ -62,14 +62,6 @@ export default function ListItemRow({
     await setListItemField(fd);
   }
 
-  async function toggleChecked() {
-    const fd = new FormData();
-    fd.set("id", item.id);
-    fd.set("list_id", listId);
-    fd.set("checked", String(item.checked));
-    await toggleListItem(fd);
-  }
-
   /* ------------------------------ RENOMEAR ----------------------------- */
   if (renaming) {
     return (
@@ -117,27 +109,32 @@ export default function ListItemRow({
   }
 
   /* --------------------------- LINHA COMPACTA -------------------------- */
-  const stop = (e: React.MouseEvent) => e.stopPropagation();
-
   return (
     <li
-      onClick={() => !locked && toggleChecked()}
       className={`border-b px-3 py-2.5 transition-colors last:border-b-0 ${
         item.checked
           ? "border-positive/20 bg-positive/15"
           : "border-line bg-surface"
-      } ${locked ? "" : "cursor-pointer active:bg-surface-2"}`}
+      }`}
     >
       <div className="flex items-center gap-2">
-        <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition ${
-            item.checked
-              ? "border-positive bg-positive text-white"
-              : "border-line"
-          }`}
-        >
-          {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
-        </span>
+        <form action={toggleListItem} className="flex shrink-0">
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="list_id" value={listId} />
+          <input type="hidden" name="checked" value={String(item.checked)} />
+          <button
+            type="submit"
+            disabled={locked}
+            aria-label={item.checked ? "Desmarcar" : "Marcar como comprado"}
+            className={`flex h-7 w-7 items-center justify-center rounded-md border transition ${
+              item.checked
+                ? "border-positive bg-positive text-white"
+                : "border-line"
+            }`}
+          >
+            {item.checked && <Check className="h-4 w-4" strokeWidth={3} />}
+          </button>
+        </form>
 
         <p
           className={`min-w-0 flex-1 truncate text-[15px] ${
@@ -150,10 +147,7 @@ export default function ListItemRow({
         {!locked && (
           <button
             type="button"
-            onClick={(e) => {
-              stop(e);
-              setRenaming(true);
-            }}
+            onClick={() => setRenaming(true)}
             className="shrink-0 rounded-lg p-1.5 text-ink-faint hover:text-ink"
             aria-label="Renomear"
           >
@@ -165,7 +159,6 @@ export default function ListItemRow({
           <form
             ref={priceForm}
             action={setListItemField}
-            onClick={stop}
             className="flex shrink-0 items-center rounded-lg border border-line bg-surface-2 pl-2"
           >
             <input type="hidden" name="id" value={item.id} />
@@ -177,7 +170,7 @@ export default function ListItemRow({
               onValueChange={setPriceReais}
               onBlur={() => priceForm.current?.requestSubmit()}
               ariaLabel={`Preço de ${item.name}`}
-              className="w-16 bg-transparent px-1 py-1.5 text-right text-[15px] outline-none"
+              className="w-16 bg-transparent px-1 py-1.5 text-right text-[15px] outline-none placeholder:text-ink-faint"
             />
           </form>
         ) : (
@@ -194,7 +187,7 @@ export default function ListItemRow({
         {!locked ? (
           <>
             {unit === "un" ? (
-              <div className="flex items-center gap-1" onClick={stop}>
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() =>
@@ -225,20 +218,17 @@ export default function ListItemRow({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 onBlur={() => commit(unit, amount)}
-                onClick={stop}
                 aria-label={`Quantidade em ${unit}`}
                 className="w-12 rounded border border-line bg-surface-2 px-1 py-0.5 text-center text-ink outline-none"
               />
             )}
 
-            <div onClick={stop}>
-              <UnitPicker
-                value={unit}
-                onChange={(u) =>
-                  commit(u, String(convertAmount(amountNum, unit, u)))
-                }
-              />
-            </div>
+            <UnitPicker
+              value={unit}
+              onChange={(u) =>
+                commit(u, String(convertAmount(amountNum, unit, u)))
+              }
+            />
           </>
         ) : (
           <span>{formatAmount(item.quantity, item.unit)}</span>
