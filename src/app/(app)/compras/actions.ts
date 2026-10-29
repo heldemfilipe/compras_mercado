@@ -15,7 +15,10 @@ async function db() {
 }
 
 function num(v: FormDataEntryValue | null, fallback = 0): number {
-  const n = Number(String(v ?? "").replace(",", "."));
+  let s = String(v ?? "").trim();
+  if (s === "") return fallback;
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  const n = Number(s.replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : fallback;
 }
 

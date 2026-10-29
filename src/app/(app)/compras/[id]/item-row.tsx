@@ -9,6 +9,7 @@ import {
   type Unit,
 } from "@/lib/format";
 import UnitPicker, { convertAmount } from "@/components/unit-picker";
+import MoneyInput from "@/components/money-input";
 import { deleteItem, updateItem } from "../actions";
 
 type Cat = { id: string; name: string };
@@ -40,6 +41,7 @@ export default function ItemRow({
   editable: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const [ePrice, setEPrice] = useState(item.unit_price);
   const [eUnit, setEUnit] = useState<Unit>(item.unit);
   const [eAmt, setEAmt] = useState(
     String(displayAmount(item.quantity, item.unit)),
@@ -64,12 +66,18 @@ export default function ItemRow({
               required
               className="input flex-1"
             />
-            <input
-              name="unit_price"
-              inputMode="decimal"
-              defaultValue={String(item.unit_price).replace(".", ",")}
-              className="input w-24 text-right"
-            />
+            <div className="relative w-28 shrink-0">
+              <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-faint">
+                R$
+              </span>
+              <MoneyInput
+                name="unit_price"
+                value={ePrice}
+                onValueChange={setEPrice}
+                ariaLabel="Valor unitário"
+                className="input w-full pl-8 pr-2 text-right"
+              />
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <input type="hidden" name="unit" value={eUnit} />
@@ -106,7 +114,12 @@ export default function ItemRow({
           <div className="flex gap-2 pt-1">
             <button
               type="button"
-              onClick={() => setEditing(false)}
+              onClick={() => {
+                setEPrice(item.unit_price);
+                setEUnit(item.unit);
+                setEAmt(String(displayAmount(item.quantity, item.unit)));
+                setEditing(false);
+              }}
               className="btn-ghost btn-sm flex-1"
             >
               <X className="h-3.5 w-3.5" /> Cancelar

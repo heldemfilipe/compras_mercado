@@ -3,13 +3,9 @@
 import { useMemo, useRef, useState } from "react";
 import { Minus, Plus, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { guessCategoryName } from "@/lib/categorize";
-import {
-  formatBRL,
-  formatMonthShort,
-  parseMoneyInput,
-  type Unit,
-} from "@/lib/format";
+import { formatBRL, formatMonthShort, type Unit } from "@/lib/format";
 import UnitPicker from "@/components/unit-picker";
+import MoneyInput from "@/components/money-input";
 import type { ProductSuggestion } from "@/lib/queries";
 import { addItem } from "../actions";
 
@@ -38,7 +34,7 @@ export default function AddItemForm({
   const [pending, setPending] = useState(false);
   const [name, setName] = useState("");
   const [catId, setCatId] = useState("");
-  const [price, setPrice] = useState("");
+  const [priceNum, setPriceNum] = useState(0);
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
   const [picked, setPicked] = useState<ProductSuggestion | null>(null);
@@ -62,7 +58,6 @@ export default function AddItemForm({
       ? picked
       : products.find((p) => norm(p.name) === norm(name)) ?? null;
 
-  const priceNum = parseMoneyInput(price);
   const guess = catId === "" && !ref0 ? guessCategoryName(name) : null;
 
   const cmp = useMemo(() => {
@@ -87,7 +82,7 @@ export default function AddItemForm({
   function resetAll() {
     setName("");
     setCatId("");
-    setPrice("");
+    setPriceNum(0);
     setQty(1);
     setUnit("un");
     setPicked(null);
@@ -179,15 +174,19 @@ export default function AddItemForm({
           )}
         </div>
 
-        <input
-          ref={priceRef}
-          name="unit_price"
-          inputMode="decimal"
-          placeholder="R$ 0,00"
-          className="input w-28 text-right"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
+        <div className="relative w-28 shrink-0">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-ink-faint">
+            R$
+          </span>
+          <MoneyInput
+            inputRef={priceRef}
+            name="unit_price"
+            value={priceNum}
+            onValueChange={setPriceNum}
+            ariaLabel="Valor unitário"
+            className="input w-full pl-8 pr-2 text-right"
+          />
+        </div>
       </div>
 
       {/* comparação de preço vs última vez */}

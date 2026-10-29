@@ -42,6 +42,7 @@ export default function ListItemRow({
 
   const priceForm = useRef<HTMLFormElement>(null);
   const [priceReais, setPriceReais] = useState(item.unit_price ?? 0);
+  const savedPrice = useRef(item.unit_price ?? 0);
   const [unit, setUnit] = useState<Unit>(item.unit);
   const [amount, setAmount] = useState(
     String(displayAmount(item.quantity, item.unit)),
@@ -168,7 +169,11 @@ export default function ListItemRow({
               name="unit_price"
               value={priceReais}
               onValueChange={setPriceReais}
-              onBlur={() => priceForm.current?.requestSubmit()}
+              onBlur={() => {
+                if (priceReais === savedPrice.current) return;
+                savedPrice.current = priceReais;
+                priceForm.current?.requestSubmit();
+              }}
               ariaLabel={`Preço de ${item.name}`}
               className="w-16 bg-transparent px-1 py-1.5 text-right text-[15px] outline-none placeholder:text-ink-faint"
             />
